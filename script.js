@@ -81,29 +81,7 @@ const obs = new IntersectionObserver(
 );
 sections.forEach((s) => obs.observe(s));
 
-const parallax = document.getElementById("parallax");
-const depthNodes = parallax
-    ? Array.from(parallax.querySelectorAll("[data-depth]"))
-    : [];
-let mouseX = 0,
-    mouseY = 0;
-let rafId = 0;
-function onMove(e) {
-    const rect = document.body.getBoundingClientRect();
-    mouseX = (e.clientX - rect.width / 2) / rect.width;
-    mouseY = (e.clientY - window.innerHeight / 2) / window.innerHeight;
-    if (!rafId) rafId = requestAnimationFrame(updateParallax);
-}
-function updateParallax() {
-    depthNodes.forEach((node) => {
-        const d = parseFloat(node.dataset.depth || "0");
-        const tx = -mouseX * d * 30;
-        const ty = -mouseY * d * 30;
-        node.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
-    });
-    rafId = 0;
-}
-window.addEventListener("mousemove", onMove, { passive: true });
+
 
 const canvas = document.getElementById("fx");
 const ctx = canvas.getContext("2d");

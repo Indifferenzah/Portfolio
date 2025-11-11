@@ -277,6 +277,12 @@ main .container {
     overflow: hidden;
 }
 
+.hero h1,
+.hero p {
+    position: relative;
+    z-index: 1;
+}
+
 .bg-grid {
     position: absolute;
     inset: -20%;
