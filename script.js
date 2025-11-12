@@ -190,3 +190,5 @@ progressBars.forEach(bar => {
 resize();
 spawn(true);
 step();
+
+canvas.style.zIndex = '5';
