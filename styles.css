@@ -54,6 +54,8 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    position: relative;
+    z-index: 6;
 }
 
 #animated-text {
@@ -300,7 +302,7 @@ canvas#fx {
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: -1;
+    z-index: 5;
     filter: blur(0.2px);
     pointer-events: none;
 }
