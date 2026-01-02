@@ -3,6 +3,9 @@
 	"version": "2.0.0",
 	"description": "Portfolio moderno con Admin Dashboard per gestione completa dei contenuti",
 	"main": "index.html",
+	"scripts": {
+		"start": "echo 'Apri index.html nel browser per visualizzare il portfolio' && echo 'Vai su admin/login.html per accedere alla dashboard (admin/admin123)'"
+	},
 	"keywords": [
 		"portfolio",
 		"admin-dashboard",
