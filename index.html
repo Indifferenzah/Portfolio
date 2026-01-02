@@ -1,214 +1,189 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indifferenzah - Portfolio</title>
     <link rel="icon" type="image/png" href="pfp.png">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div id="intro">
-        <div class="bg-grid" aria-hidden="true"></div>
-        <div class="intro-content">
-            <div id="animated-text"></div>
-            <div class="bouncing-arrow"><h1>↓</h1></div>
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loader"></div>
+            <h2 id="loading-text">Indifferenzah</h2>
         </div>
     </div>
-    <canvas id="fx" aria-hidden="true"></canvas>
-    <header>
-        <div class="container nav">
-            <div class="brand">
-                <svg class="logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <defs>
-                        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#22d3ee" />
-                            <stop offset="100%" stop-color="#8b5cf6" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M3 12l6.5-6.5L12 8l2.5-2.5L21 12l-2 2-4.5-4.5L12 12l-2.5-2.5L5 14l-2-2z" fill="url(#g)" />
-                </svg>
-                <span>Indifferenzah</span>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-code"></i>
+                <span id="nav-name">Indifferenzah</span>
             </div>
-            <nav>
-                <ul id="nav-links">
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#experience">Experience</a></li>
-                    <li><a href="#skills">Skills</a></li>
-                    <li><a href="#projects">Projects</a></li>
-                    <li><a href="#education">Education</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                </ul>
-            </nav>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu" id="nav-menu">
+                <li class="nav-item"><a href="#home" class="nav-link active">Home</a></li>
+                <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
+                <li class="nav-item"><a href="#experience" class="nav-link">Experience</a></li>
+                <li class="nav-item"><a href="#skills" class="nav-link">Skills</a></li>
+                <li class="nav-item"><a href="#projects" class="nav-link">Projects</a></li>
+                <li class="nav-item"><a href="#education" class="nav-link">Education</a></li>
+                <li class="nav-item"><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
-    <main style="padding-top: 70px;">
-        <section class="hero" id="home">
-            <div class="bg-grid" aria-hidden="true"></div>
-            <div class="container" id="parallax">
-                <h1 data-depth="0.15">Indifferenzah</h1>
-                <p data-depth="0.2">
-                    Web Developer & Python Developer with over 2 years of experience in HTML, CSS, JS, and Python.
-                </p>
-            </div>
-        </section>
-
-        <section id="about" class="about">
-            <div class="container grid">
-                <div class="col-8 card">
-                    <h2>About Me</h2>
-                    <p class="muted">
-                        I have been developing with HTML, CSS, JS, and Python for over 2 years. My journey in web development started with a passion for creating interactive and visually appealing websites. I specialize in front-end technologies and have a strong foundation in back-end scripting with Python. I enjoy solving complex problems and building efficient, scalable solutions. Outside of coding, I love exploring new technologies and contributing to open-source projects.
+    <main>
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title" id="hero-name">Indifferenzah</h1>
+                    <p class="hero-subtitle" id="hero-title">Web Developer & Python Developer</p>
+                    <p class="hero-description" id="hero-description">
+                        Web Developer & Python Developer with over 2 years of experience in HTML, CSS, JS, and Python.
                     </p>
-                    <p class="muted">
-                        With a focus on clean code and user experience, I strive to deliver high-quality work that meets client needs. I am always eager to learn and adapt to new challenges in the ever-evolving tech landscape.
-                    </p>
+                    <div class="hero-buttons">
+                        <a href="#projects" class="btn btn-primary">
+                            <i class="fas fa-folder"></i> View Projects
+                        </a>
+                        <a href="#contact" class="btn btn-outline">
+                            <i class="fas fa-envelope"></i> Contact Me
+                        </a>
+                    </div>
+                    <div class="hero-social">
+                        <a href="#" id="github-link" class="social-link" target="_blank" rel="noopener">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="mailto:info@indifferenzah.com" id="email-link" class="social-link">
+                            <i class="fas fa-envelope"></i>
+                        </a>
+                        <a href="#" id="discord-link" class="social-link">
+                            <i class="fab fa-discord"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="col-4">
-                    <div class="stat"><strong>2+</strong> Years Experience</div>
-                    <div class="stat" style="margin-top: 10px">
-                        <strong>Web & Python</strong> Dev
-                    </div>
-                    <div class="stat" style="margin-top: 10px">
-                        <strong>10+</strong> Projects Completed
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="experience" class="experience">
-            <div class="container">
-                <h2>Experience</h2>
-                <div class="grid">
-                    <div class="col-12 card">
-                        <h3>Freelance Web Developer</h3>
-                        <p class="muted">2022 - Present</p>
-                        <p>Developed responsive websites for various clients using HTML, CSS, and JavaScript. Integrated back-end functionalities with Python for dynamic content.</p>
-                    </div>
-                    <div class="col-12 card">
-                        <h3>Python Automation Specialist</h3>
-                        <p class="muted">2021 - 2022</p>
-                        <p>Created automation scripts for data processing and web scraping. Improved efficiency by 50% in repetitive tasks.</p>
-                    </div>
-                    <div class="col-12 card">
-                        <h3>Open-Source Contributor</h3>
-                        <p class="muted">Ongoing</p>
-                        <p>Contributed to various open-source projects on GitHub, focusing on front-end enhancements and bug fixes.</p>
+                <div class="hero-image">
+                    <div class="floating-card">
+                        <i class="fas fa-code code-icon"></i>
                     </div>
                 </div>
             </div>
+            <div class="scroll-indicator">
+                <i class="fas fa-chevron-down"></i>
+            </div>
         </section>
 
-        <section id="skills" class="skills">
+        <section id="about" class="section">
             <div class="container">
-                <h2>Skills</h2>
-                <div class="grid">
-                    <div class="col-4 card skill">
-                        <strong>HTML</strong>
-                        <div class="progress-bar">
-                            <div class="progress" data-percent="100"></div>
+                <h2 class="section-title">About Me</h2>
+                <div class="about-grid">
+                    <div class="about-content">
+                        <div class="card">
+                            <p id="about-text-1" class="about-text"></p>
+                            <p id="about-text-2" class="about-text"></p>
                         </div>
                     </div>
-                    <div class="col-4 card skill">
-                        <strong>CSS</strong>
-                        <div class="progress-bar">
-                            <div class="progress" data-percent="100"></div>
+                    <div class="about-stats">
+                        <div class="stat-card">
+                            <i class="fas fa-calendar-alt"></i>
+                            <h3 id="years-exp">2+</h3>
+                            <p>Years Experience</p>
                         </div>
-                    </div>
-                    <div class="col-4 card skill">
-                        <strong>JavaScript</strong>
-                        <div class="progress-bar">
-                            <div class="progress" data-percent="75"></div>
+                        <div class="stat-card">
+                            <i class="fas fa-project-diagram"></i>
+                            <h3 id="projects-count">10+</h3>
+                            <p>Projects Completed</p>
                         </div>
-                    </div>
-                    <div class="col-4 card skill">
-                        <strong>Python</strong>
-                        <div class="progress-bar">
-                            <div class="progress" data-percent="100"></div>
+                        <div class="stat-card">
+                            <i class="fas fa-code-branch"></i>
+                            <h3>Web & Python</h3>
+                            <p>Specialization</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="projects" class="projects">
+        <section id="experience" class="section">
             <div class="container">
-                <h2>Major Projects</h2>
-                <div class="grid">
-                    <div class="col-6 card project">
-                        <h3>Responsive Portfolio Website</h3>
-                        <p class="muted">A modern portfolio site built with HTML, CSS, and JS, featuring animations and interactive elements.</p>
-                    </div>
-                    <div class="col-6 card project">
-                        <h3>Python Discord Bot</h3>
-                        <p class="muted">A bot for managing Discord servers, automating tasks, and enhancing user interaction using Python.
-                            You can find it on <a href="https://github.com/Indifferenzah/Valiance" target="_blank" rel="noopener noreferrer">GitHub</a>.
-                        </p>
-                    </div>
-                    <div class="col-6 card project">
-                        <h3>AI Detector</h3>
-                        <p class="muted">A Python AI Detector using Python libreries.
-                            You can find it on <a href="https://github.com/Indifferenzah/AiDetector" target="_blank" rel="noopener noreferrer">GitHub</a>.
-                        </p>
-                    </div>
-                    <div class="col-6 card project">
-                        <h3>Valiance Website</h3>
-                        <p class="muted">A simple modern website with a forum for the Valiance Clan.
-                            You can find it on <a href="https://github.com/Indifferenzah/ValianceSite" target="_blank" rel="noopener noreferrer">GitHub</a>.
-                        </p>
-                    </div>
+                <h2 class="section-title">Experience</h2>
+                <div class="timeline" id="experience-timeline">
                 </div>
             </div>
         </section>
 
-        <section id="education" class="education">
+        <section id="skills" class="section">
             <div class="container">
-                <h2>Education</h2>
-                <div class="grid">
-                    <div class="col-12 card">
-                        <h3>Self-Taught Developer</h3>
-                        <p class="muted">2020 - Present</p>
-                        <p>Learned web development and Python through online courses, tutorials, and hands-on projects. Completed certifications in HTML, CSS, JavaScript, and Python.</p>
-                    </div>
-                    <div class="col-12 card">
-                        <h3>High School</h3>
-                        <p class="muted">2022 - Present</p>
-                        <p>Currently in school, ITIS Informatico in Italy.</p>
-                    </div>
+                <h2 class="section-title">Skills</h2>
+                <div class="skills-grid" id="skills-grid">
                 </div>
             </div>
         </section>
 
-        <section id="contact">
+        <section id="projects" class="section">
             <div class="container">
-                <div class="card">
-                    <h2>Contact</h2>
-                    <p class="muted">
-                        Get in touch for collaborations, projects, or just to say hello. I'm always open to new opportunities and discussions.
-                    </p>
-                    <p>
-                        <strong>Email:</strong> indifferenzah@pm.me
-                    </p>
-                    <p>
-                        <strong>Discord:</strong> <a href="#">@indifferenzah</a>
-                    </p>
-                    <p>
-                        <strong>GitHub:</strong> <a href="https://github.com/indifferenzah">github.com/indifferenzah</a>
-                    </p>
+                <h2 class="section-title">Projects</h2>
+                <div class="projects-grid" id="projects-grid">
+                    <!-- Projects will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Education Section -->
+        <section id="education" class="section">
+            <div class="container">
+                <h2 class="section-title">Education</h2>
+                <div class="education-grid" id="education-grid">
+                    <!-- Education will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section contact-section">
+            <div class="container">
+                <h2 class="section-title">Get In Touch</h2>
+                <div class="contact-content">
+                    <div class="contact-info">
+                        <div class="contact-card">
+                            <i class="fas fa-envelope"></i>
+                            <h3>Email</h3>
+                            <p id="contact-email">info@indifferenzah.com</p>
+                        </div>
+                        <div class="contact-card">
+                            <i class="fab fa-discord"></i>
+                            <h3>Discord</h3>
+                            <p id="contact-discord">@indifferenzah</p>
+                        </div>
+                        <div class="contact-card">
+                            <i class="fab fa-github"></i>
+                            <h3>GitHub</h3>
+                            <a href="#" id="contact-github" target="_blank" rel="noopener">github.com/indifferenzah</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer>
-        <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-                © <span id="year"></span> Indifferenzah.
-            </div>
+    <footer class="footer">
+        <div class="container">
+            <p>© <span id="year"></span> <span id="footer-name">Indifferenzah</span>. All rights reserved.</p>
+            <a href="admin/login.html" class="admin-link" title="Admin Dashboard">
+                <i class="fas fa-lock"></i>
+            </a>
         </div>
     </footer>
 
-    <script src="script.js"></script>
+    <script src="js/dataManager.js"></script>
+    <script src="js/portfolio.js"></script>
 </body>
 </html>

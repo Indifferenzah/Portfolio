@@ -1,4 +1,17 @@
 {
+	"name": "portfolio-modernizzato",
+	"version": "2.0.0",
+	"description": "Portfolio moderno con Admin Dashboard per gestione completa dei contenuti",
+	"main": "index.html",
+	"keywords": [
+		"portfolio",
+		"admin-dashboard",
+		"javascript",
+		"responsive",
+		"modern"
+	],
+	"author": "Indifferenzah",
+	"license": "MIT",
 	"dependencies": {
 		"@vercel/analytics": "^1.5.0"
 	}
