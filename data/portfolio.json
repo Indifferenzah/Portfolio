@@ -1,0 +1,91 @@
+{
+  "personalInfo": {
+    "name": "Indifferenzah",
+    "title": "Web Developer & Python Developer",
+    "description": "Passionate developer crafting elegant solutions with HTML, CSS, JavaScript, and Python. Over 2 years of hands-on experience building web applications and automation tools.",
+    "email": "contact@indifferenzah.dev",
+    "discord": "indifferenzah",
+    "github": "Indifferenzah",
+    "kofi": "indifferenzah",
+    "yearsExperience": "2+",
+    "projectsCompleted": "10+"
+  },
+  "about": {
+    "text1": "I'm a passionate web and Python developer with over 2 years of experience building interactive, visually appealing websites and automation tools. My journey started with a fascination for how the web works, which led me to dive deep into front-end technologies and back-end scripting with Python.",
+    "text2": "I believe in clean code, intuitive design, and continuous learning. Whether it's crafting pixel-perfect interfaces or building efficient backend scripts, I approach every project with attention to detail and a drive to deliver excellent results."
+  },
+  "experiences": [
+    {
+      "id": 1,
+      "title": "Freelance Web Developer",
+      "period": "2022 - Present",
+      "description": "Developed responsive websites and web applications for various clients using HTML, CSS, and JavaScript. Integrated back-end functionalities with Python for dynamic content and automation."
+    },
+    {
+      "id": 2,
+      "title": "Python Automation Specialist",
+      "period": "2021 - 2022",
+      "description": "Created automation scripts for data processing and web scraping. Improved efficiency by 50% in repetitive tasks through smart tooling."
+    },
+    {
+      "id": 3,
+      "title": "Open-Source Contributor",
+      "period": "Ongoing",
+      "description": "Contributed to various open-source projects on GitHub, focusing on front-end enhancements and bug fixes."
+    }
+  ],
+  "skills": [
+    { "id": 1, "name": "HTML",       "level": 100 },
+    { "id": 2, "name": "CSS",        "level": 100 },
+    { "id": 3, "name": "JavaScript", "level": 75  },
+    { "id": 4, "name": "Python",     "level": 100 }
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "title": "Valiance Discord Bot",
+      "description": "A feature-rich Discord bot built with JavaScript and Discord.js. Handles server management, automated tasks, and enhanced user interaction.",
+      "link": "https://github.com/Indifferenzah/Valiancejs",
+      "image": "",
+      "technologies": ["JavaScript", "Discord.js", "Node.js"]
+    },
+    {
+      "id": 2,
+      "title": "AI Detector",
+      "description": "AI-powered content detection tool built with Python machine learning libraries.",
+      "link": "https://github.com/Indifferenzah/AiDetector",
+      "image": "",
+      "technologies": ["Python", "Machine Learning"]
+    },
+    {
+      "id": 3,
+      "title": "Valiance Website",
+      "description": "A modern website with a forum for the Valiance community. Clean UI with responsive design.",
+      "link": "https://github.com/Indifferenzah/ValianceSite",
+      "image": "",
+      "technologies": ["HTML", "CSS", "JavaScript"]
+    },
+    {
+      "id": 4,
+      "title": "Portfolio Website",
+      "description": "This portfolio — built from scratch with a glassmorphism design, admin dashboard, and secure authentication.",
+      "link": "",
+      "image": "",
+      "technologies": ["HTML", "CSS", "JavaScript", "Web Crypto API"]
+    }
+  ],
+  "education": [
+    {
+      "id": 1,
+      "title": "Self-Taught Developer",
+      "period": "2020 - Present",
+      "description": "Continuous self-education through online courses, documentation, tutorials, and hands-on projects. Completed certifications in HTML, CSS, JavaScript, and Python."
+    },
+    {
+      "id": 2,
+      "title": "ITIS Informatico",
+      "period": "2022 - Present",
+      "description": "High school focused on computer science and programming in Italy. Studying software development, algorithms, and IT systems."
+    }
+  ]
+}

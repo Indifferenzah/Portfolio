@@ -8,9 +8,10 @@ import { escapeHtml, $, observe, addClass } from './utils.js';
 
 /**
  * Render all portfolio sections from store data.
+ * @returns {Promise<void>}
  */
-export function renderAll() {
-  const data = store.getAll();
+export async function renderAll() {
+  const data = await store.getAll();
   renderPersonalInfo(data.personalInfo);
   renderAbout(data.about);
   renderExperiences(data.experiences);

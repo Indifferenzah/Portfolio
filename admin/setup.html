@@ -121,10 +121,9 @@
     import { hashPassword, generateSalt, measurePasswordStrength } from '../js/crypto.js';
     import { ParticleSystem } from '../js/particles.js';
 
-    // Guard: redirect if credentials already exist
-    if (!auth.guardSetup()) {
-      // guardSetup handles the redirect
-    }
+    // Guard: redirect if credentials already exist.
+    // top-level await is valid in type="module" scripts.
+    await auth.guardSetup();
 
     // Particle background
     const canvas = document.getElementById('bg-canvas');
@@ -196,7 +195,10 @@
       try {
         const salt = generateSalt();
         const hash = await hashPassword(password, salt);
-        auth.saveCredentials(username, hash, salt);
+        const setupResult = await auth.saveCredentials(username, hash, salt);
+        if (!setupResult.success) {
+          throw new Error(setupResult.message);
+        }
 
         // Brief success pause then redirect
         await new Promise(r => setTimeout(r, 500));

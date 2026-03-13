@@ -1,7 +1,7 @@
 /**
  * admin.js — Admin dashboard controller.
  * Full CRUD operations, modals, toasts, import/export.
- * All operations are async-aware for Web Crypto API usage.
+ * All store and auth operations are async (API-backed).
  */
 
 import { auth } from './auth.js';
@@ -11,10 +11,12 @@ import { TOAST_DURATION_MS } from './config.js';
 import { measurePasswordStrength } from './crypto.js';
 
 // ── Auth Guard ────────────────────────────────────────────
+// Top-level await is valid in ES modules (type="module").
 
-if (!auth.requireAuth()) {
-  // requireAuth() handles the redirect
-  throw new Error('Not authenticated');
+const ready = await auth.requireAuth();
+if (!ready) {
+  // requireAuth() has already triggered a redirect; halt execution.
+  throw new Error('Not authenticated — redirecting');
 }
 
 // ── Boot ──────────────────────────────────────────────────
@@ -92,9 +94,9 @@ function bindSidebarNav() {
 function initLogout() {
   const btn = document.getElementById('logout-btn');
   if (btn) {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (confirm('Are you sure you want to log out?')) {
-        auth.logout('../index.html');
+        await auth.logout('../index.html');
       }
     });
   }
@@ -102,7 +104,7 @@ function initLogout() {
 
 // ── Section Loader ────────────────────────────────────────
 
-function loadSection(name) {
+async function loadSection(name) {
   // Hide all sections
   $$('.content-section').forEach(s => removeClass(s, 'is-active'));
 
@@ -112,21 +114,21 @@ function loadSection(name) {
 
   // Load section data
   switch (name) {
-    case 'dashboard':   loadDashboard();       break;
-    case 'personal':    loadPersonalForm();    break;
-    case 'about':       loadAboutForm();       break;
-    case 'experiences': loadExperiencesList(); break;
-    case 'skills':      loadSkillsList();      break;
-    case 'projects':    loadProjectsList();    break;
-    case 'education':   loadEducationList();   break;
-    case 'settings':    loadSettings();        break;
+    case 'dashboard':   await loadDashboard();       break;
+    case 'personal':    await loadPersonalForm();    break;
+    case 'about':       await loadAboutForm();       break;
+    case 'experiences': await loadExperiencesList(); break;
+    case 'skills':      await loadSkillsList();      break;
+    case 'projects':    await loadProjectsList();    break;
+    case 'education':   await loadEducationList();   break;
+    case 'settings':    loadSettings();              break;
   }
 }
 
 // ── Dashboard ─────────────────────────────────────────────
 
-function loadDashboard() {
-  const data = store.getAll();
+async function loadDashboard() {
+  const data = await store.getAll();
   setText('stat-exp-count',      data.experiences?.length ?? 0);
   setText('stat-skills-count',   data.skills?.length ?? 0);
   setText('stat-projects-count', data.projects?.length ?? 0);
@@ -140,8 +142,8 @@ function setText(id, value) {
 
 // ── Personal Info ─────────────────────────────────────────
 
-function loadPersonalForm() {
-  const info = store.getPersonalInfo();
+async function loadPersonalForm() {
+  const info = await store.getPersonalInfo();
   setVal('personal-name',        info.name);
   setVal('personal-title',       info.title);
   setVal('personal-description', info.description);
@@ -154,9 +156,9 @@ function loadPersonalForm() {
 
   const form = document.getElementById('personal-form');
   if (form) {
-    form.onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
-      const result = store.updatePersonalInfo({
+      const result = await store.updatePersonalInfo({
         name:              getVal('personal-name'),
         title:             getVal('personal-title'),
         description:       getVal('personal-description'),
@@ -174,16 +176,16 @@ function loadPersonalForm() {
 
 // ── About ─────────────────────────────────────────────────
 
-function loadAboutForm() {
-  const about = store.getAbout();
+async function loadAboutForm() {
+  const about = await store.getAbout();
   setVal('about-text1', about.text1);
   setVal('about-text2', about.text2);
 
   const form = document.getElementById('about-form');
   if (form) {
-    form.onsubmit = (e) => {
+    form.onsubmit = async (e) => {
       e.preventDefault();
-      const result = store.updateAbout({
+      const result = await store.updateAbout({
         text1: getVal('about-text1'),
         text2: getVal('about-text2'),
       });
@@ -194,11 +196,11 @@ function loadAboutForm() {
 
 // ── Experiences ───────────────────────────────────────────
 
-function loadExperiencesList() {
+async function loadExperiencesList() {
   const list = document.getElementById('experiences-list');
   if (!list) return;
 
-  const items = store.getExperiences();
+  const items = await store.getExperiences();
 
   if (items.length === 0) {
     list.innerHTML = emptyState('No experiences yet. Click "Add Experience" to get started.');
@@ -226,7 +228,7 @@ function loadExperiencesList() {
   bindAddBtn('add-experience-btn', () => showAddExperienceModal());
 }
 
-function showAddExperienceModal(existingExp = null) {
+async function showAddExperienceModal(existingExp = null) {
   const isEdit = !!existingExp;
   const exp = existingExp ?? { title: '', period: '', description: '' };
 
@@ -250,7 +252,7 @@ function showAddExperienceModal(existingExp = null) {
     </form>
   `);
 
-  document.getElementById('exp-modal-form').addEventListener('submit', (e) => {
+  document.getElementById('exp-modal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
       title:       getVal('m-exp-title'),
@@ -259,23 +261,23 @@ function showAddExperienceModal(existingExp = null) {
     };
 
     const result = isEdit
-      ? store.updateExperience(existingExp.id, payload)
-      : store.addExperience(payload);
+      ? await store.updateExperience(existingExp.id, payload)
+      : await store.addExperience(payload);
 
     closeModal();
     showToast(result.message, result.success ? 'success' : 'error');
-    loadExperiencesList();
-    loadDashboard();
+    await loadExperiencesList();
+    await loadDashboard();
   });
 }
 
 // ── Skills ────────────────────────────────────────────────
 
-function loadSkillsList() {
+async function loadSkillsList() {
   const list = document.getElementById('skills-list');
   if (!list) return;
 
-  const items = store.getSkills();
+  const items = await store.getSkills();
 
   if (items.length === 0) {
     list.innerHTML = emptyState('No skills yet. Click "Add Skill" to get started.');
@@ -305,7 +307,7 @@ function loadSkillsList() {
   bindAddBtn('add-skill-btn', () => showAddSkillModal());
 }
 
-function showAddSkillModal(existingSkill = null) {
+async function showAddSkillModal(existingSkill = null) {
   const isEdit = !!existingSkill;
   const skill = existingSkill ?? { name: '', level: 50 };
 
@@ -325,7 +327,7 @@ function showAddSkillModal(existingSkill = null) {
     </form>
   `);
 
-  document.getElementById('skill-modal-form').addEventListener('submit', (e) => {
+  document.getElementById('skill-modal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
       name:  getVal('m-skill-name'),
@@ -333,23 +335,23 @@ function showAddSkillModal(existingSkill = null) {
     };
 
     const result = isEdit
-      ? store.updateSkill(existingSkill.id, payload)
-      : store.addSkill(payload);
+      ? await store.updateSkill(existingSkill.id, payload)
+      : await store.addSkill(payload);
 
     closeModal();
     showToast(result.message, result.success ? 'success' : 'error');
-    loadSkillsList();
-    loadDashboard();
+    await loadSkillsList();
+    await loadDashboard();
   });
 }
 
 // ── Projects ──────────────────────────────────────────────
 
-function loadProjectsList() {
+async function loadProjectsList() {
   const list = document.getElementById('projects-list');
   if (!list) return;
 
-  const items = store.getProjects();
+  const items = await store.getProjects();
 
   if (items.length === 0) {
     list.innerHTML = emptyState('No projects yet. Click "Add Project" to get started.');
@@ -384,7 +386,7 @@ function loadProjectsList() {
   bindAddBtn('add-project-btn', () => showAddProjectModal());
 }
 
-function showAddProjectModal(existingProject = null) {
+async function showAddProjectModal(existingProject = null) {
   const isEdit = !!existingProject;
   const project = existingProject ?? { title: '', description: '', link: '', technologies: [] };
   const techString = (project.technologies ?? []).join(', ');
@@ -413,7 +415,7 @@ function showAddProjectModal(existingProject = null) {
     </form>
   `);
 
-  document.getElementById('project-modal-form').addEventListener('submit', (e) => {
+  document.getElementById('project-modal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const techInput = getVal('m-proj-tech');
     const technologies = techInput
@@ -428,23 +430,23 @@ function showAddProjectModal(existingProject = null) {
     };
 
     const result = isEdit
-      ? store.updateProject(existingProject.id, payload)
-      : store.addProject(payload);
+      ? await store.updateProject(existingProject.id, payload)
+      : await store.addProject(payload);
 
     closeModal();
     showToast(result.message, result.success ? 'success' : 'error');
-    loadProjectsList();
-    loadDashboard();
+    await loadProjectsList();
+    await loadDashboard();
   });
 }
 
 // ── Education ─────────────────────────────────────────────
 
-function loadEducationList() {
+async function loadEducationList() {
   const list = document.getElementById('education-list');
   if (!list) return;
 
-  const items = store.getEducation();
+  const items = await store.getEducation();
 
   if (items.length === 0) {
     list.innerHTML = emptyState('No education entries yet. Click "Add Education" to get started.');
@@ -472,7 +474,7 @@ function loadEducationList() {
   bindAddBtn('add-education-btn', () => showAddEducationModal());
 }
 
-function showAddEducationModal(existingEdu = null) {
+async function showAddEducationModal(existingEdu = null) {
   const isEdit = !!existingEdu;
   const edu = existingEdu ?? { title: '', period: '', description: '' };
 
@@ -496,7 +498,7 @@ function showAddEducationModal(existingEdu = null) {
     </form>
   `);
 
-  document.getElementById('edu-modal-form').addEventListener('submit', (e) => {
+  document.getElementById('edu-modal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
       title:       getVal('m-edu-title'),
@@ -505,13 +507,13 @@ function showAddEducationModal(existingEdu = null) {
     };
 
     const result = isEdit
-      ? store.updateEducation(existingEdu.id, payload)
-      : store.addEducation(payload);
+      ? await store.updateEducation(existingEdu.id, payload)
+      : await store.addEducation(payload);
 
     closeModal();
     showToast(result.message, result.success ? 'success' : 'error');
-    loadEducationList();
-    loadDashboard();
+    await loadEducationList();
+    await loadDashboard();
   });
 }
 
@@ -568,8 +570,8 @@ function loadSettings() {
   // Export
   const exportBtn = document.getElementById('export-data-btn');
   if (exportBtn) {
-    exportBtn.onclick = () => {
-      const json = store.exportAll();
+    exportBtn.onclick = async () => {
+      const json = await store.exportAll();
       const date = new Date().toISOString().split('T')[0];
       downloadFile(json, `portfolio-data-${date}.json`);
       showToast('Data exported successfully!', 'success');
@@ -588,9 +590,9 @@ function loadSettings() {
         if (!file) return;
         try {
           const text = await readFile(file);
-          const result = store.importAll(text);
+          const result = await store.importAll(text);
           showToast(result.message, result.success ? 'success' : 'error');
-          if (result.success) loadSection('dashboard');
+          if (result.success) await loadSection('dashboard');
         } catch (err) {
           showToast(`Import error: ${err.message}`, 'error');
         }
@@ -602,66 +604,70 @@ function loadSettings() {
   // Reset
   const resetBtn = document.getElementById('reset-data-btn');
   if (resetBtn) {
-    resetBtn.onclick = () => {
+    resetBtn.onclick = async () => {
       if (confirm('Reset ALL portfolio data to defaults? This cannot be undone.')) {
-        const result = store.reset();
+        const result = await store.reset();
         showToast(result.message, 'warning');
-        loadSection('dashboard');
+        await loadSection('dashboard');
       }
     };
   }
 }
 
 // ── Global onclick handlers ───────────────────────────────
-// These are called from innerHTML onclick attributes
+// These are called from innerHTML onclick attributes.
 
 window._admin = {
-  editExperience: (id) => {
-    const exp = store.getExperiences().find(e => e.id === id);
+  editExperience: async (id) => {
+    const items = await store.getExperiences();
+    const exp = items.find(e => e.id === id);
     if (exp) showAddExperienceModal(exp);
   },
-  deleteExperience: (id) => {
+  deleteExperience: async (id) => {
     if (confirm('Delete this experience?')) {
-      const result = store.deleteExperience(id);
+      const result = await store.deleteExperience(id);
       showToast(result.message, 'success');
-      loadExperiencesList();
-      loadDashboard();
+      await loadExperiencesList();
+      await loadDashboard();
     }
   },
-  editSkill: (id) => {
-    const skill = store.getSkills().find(s => s.id === id);
+  editSkill: async (id) => {
+    const items = await store.getSkills();
+    const skill = items.find(s => s.id === id);
     if (skill) showAddSkillModal(skill);
   },
-  deleteSkill: (id) => {
+  deleteSkill: async (id) => {
     if (confirm('Delete this skill?')) {
-      const result = store.deleteSkill(id);
+      const result = await store.deleteSkill(id);
       showToast(result.message, 'success');
-      loadSkillsList();
-      loadDashboard();
+      await loadSkillsList();
+      await loadDashboard();
     }
   },
-  editProject: (id) => {
-    const project = store.getProjects().find(p => p.id === id);
+  editProject: async (id) => {
+    const items = await store.getProjects();
+    const project = items.find(p => p.id === id);
     if (project) showAddProjectModal(project);
   },
-  deleteProject: (id) => {
+  deleteProject: async (id) => {
     if (confirm('Delete this project?')) {
-      const result = store.deleteProject(id);
+      const result = await store.deleteProject(id);
       showToast(result.message, 'success');
-      loadProjectsList();
-      loadDashboard();
+      await loadProjectsList();
+      await loadDashboard();
     }
   },
-  editEducation: (id) => {
-    const edu = store.getEducation().find(e => e.id === id);
+  editEducation: async (id) => {
+    const items = await store.getEducation();
+    const edu = items.find(e => e.id === id);
     if (edu) showAddEducationModal(edu);
   },
-  deleteEducation: (id) => {
+  deleteEducation: async (id) => {
     if (confirm('Delete this education entry?')) {
-      const result = store.deleteEducation(id);
+      const result = await store.deleteEducation(id);
       showToast(result.message, 'success');
-      loadEducationList();
-      loadDashboard();
+      await loadEducationList();
+      await loadDashboard();
     }
   },
 };

@@ -98,10 +98,9 @@
     import { auth } from '../js/auth.js';
     import { ParticleSystem } from '../js/particles.js';
 
-    // Guard: redirect to setup if no credentials, or to dashboard if already logged in
-    if (!auth.guardLogin()) {
-      // guardLogin handles redirects
-    }
+    // Guard: redirect to setup if no credentials, or to dashboard if already logged in.
+    // top-level await is valid in type="module" scripts.
+    await auth.guardLogin();
 
     // Particle background
     const canvas = document.getElementById('bg-canvas');

@@ -10,9 +10,9 @@ import { $, $$, debounce, throttle, addClass, removeClass, toggleClass } from '.
 
 // ── Entry Point ───────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initLoadingScreen();
-  renderAll();
+  await renderAll();
   initNavigation();
   initScrollEffects();
   initRevealAnimations();

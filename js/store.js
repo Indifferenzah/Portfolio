@@ -1,12 +1,15 @@
 /**
- * store.js — localStorage data manager for portfolio content.
- * Provides typed CRUD operations for all portfolio sections.
+ * store.js — Server-backed data manager for portfolio content.
+ * All CRUD operations are async; data persists to data/portfolio.json
+ * via the Node.js HTTP server API.
  */
 
-import { STORAGE_KEYS } from './config.js';
+import { API_ENDPOINTS } from './config.js';
+import { auth } from './auth.js';
 import { nextId, deepClone } from './utils.js';
 
 // ── Default Data ─────────────────────────────────────────
+// Used for the reset() operation only; server holds the live copy.
 
 const DEFAULT_DATA = {
   personalInfo: {
@@ -103,205 +106,271 @@ const DEFAULT_DATA = {
 // ── Store Class ──────────────────────────────────────────
 
 class Store {
-  constructor() {
-    this._key = STORAGE_KEYS.portfolioData;
-    this._initialize();
-  }
-
   // ── Internal ───────────────────────────────────────────
 
-  _initialize() {
-    if (!localStorage.getItem(this._key)) {
-      this._save(DEFAULT_DATA);
-    }
-  }
-
-  _load() {
+  /**
+   * Load data from the server (public API, no auth required).
+   * @returns {Promise<object>}
+   */
+  async _load() {
     try {
-      const raw = localStorage.getItem(this._key);
-      return raw ? JSON.parse(raw) : deepClone(DEFAULT_DATA);
+      const res = await fetch(API_ENDPOINTS.data);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
     } catch {
       return deepClone(DEFAULT_DATA);
     }
   }
 
-  _save(data) {
-    localStorage.setItem(this._key, JSON.stringify(data));
+  /**
+   * Save data to the server (requires valid auth token).
+   * @param {object} data
+   */
+  async _save(data) {
+    const res = await fetch(API_ENDPOINTS.data, {
+      method: 'PUT',
+      headers: auth._authHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Save failed' }));
+      throw new Error(err.error || 'Save failed');
+    }
+  }
+
+  // ── Full data ──────────────────────────────────────────
+
+  async getAll() {
+    return this._load();
   }
 
   // ── Personal Info ──────────────────────────────────────
 
-  getPersonalInfo() {
-    return this._load().personalInfo;
+  async getPersonalInfo() {
+    return (await this._load()).personalInfo;
   }
 
-  updatePersonalInfo(info) {
-    const data = this._load();
+  async updatePersonalInfo(info) {
+    const data = await this._load();
     data.personalInfo = { ...data.personalInfo, ...info };
-    this._save(data);
-    return { success: true, message: 'Personal info updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Personal info updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── About ──────────────────────────────────────────────
 
-  getAbout() {
-    return this._load().about;
+  async getAbout() {
+    return (await this._load()).about;
   }
 
-  updateAbout(about) {
-    const data = this._load();
+  async updateAbout(about) {
+    const data = await this._load();
     data.about = { ...data.about, ...about };
-    this._save(data);
-    return { success: true, message: 'About section updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'About section updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── Experiences ────────────────────────────────────────
 
-  getExperiences() {
-    return this._load().experiences ?? [];
+  async getExperiences() {
+    return (await this._load()).experiences ?? [];
   }
 
-  addExperience(exp) {
-    const data = this._load();
+  async addExperience(exp) {
+    const data = await this._load();
     const item = { ...exp, id: nextId(data.experiences) };
     data.experiences.push(item);
-    this._save(data);
-    return { success: true, message: 'Experience added!', data: item };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Experience added!', data: item };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  updateExperience(id, exp) {
-    const data = this._load();
+  async updateExperience(id, exp) {
+    const data = await this._load();
     const idx = data.experiences.findIndex(e => e.id === id);
     if (idx === -1) return { success: false, message: 'Experience not found.' };
     data.experiences[idx] = { ...data.experiences[idx], ...exp };
-    this._save(data);
-    return { success: true, message: 'Experience updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Experience updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  deleteExperience(id) {
-    const data = this._load();
+  async deleteExperience(id) {
+    const data = await this._load();
     data.experiences = data.experiences.filter(e => e.id !== id);
-    this._save(data);
-    return { success: true, message: 'Experience deleted.' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Experience deleted.' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── Skills ─────────────────────────────────────────────
 
-  getSkills() {
-    return this._load().skills ?? [];
+  async getSkills() {
+    return (await this._load()).skills ?? [];
   }
 
-  addSkill(skill) {
-    const data = this._load();
+  async addSkill(skill) {
+    const data = await this._load();
     const item = { ...skill, id: nextId(data.skills) };
     data.skills.push(item);
-    this._save(data);
-    return { success: true, message: 'Skill added!', data: item };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Skill added!', data: item };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  updateSkill(id, skill) {
-    const data = this._load();
+  async updateSkill(id, skill) {
+    const data = await this._load();
     const idx = data.skills.findIndex(s => s.id === id);
     if (idx === -1) return { success: false, message: 'Skill not found.' };
     data.skills[idx] = { ...data.skills[idx], ...skill };
-    this._save(data);
-    return { success: true, message: 'Skill updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Skill updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  deleteSkill(id) {
-    const data = this._load();
+  async deleteSkill(id) {
+    const data = await this._load();
     data.skills = data.skills.filter(s => s.id !== id);
-    this._save(data);
-    return { success: true, message: 'Skill deleted.' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Skill deleted.' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── Projects ───────────────────────────────────────────
 
-  getProjects() {
-    return this._load().projects ?? [];
+  async getProjects() {
+    return (await this._load()).projects ?? [];
   }
 
-  addProject(project) {
-    const data = this._load();
+  async addProject(project) {
+    const data = await this._load();
     const item = { ...project, id: nextId(data.projects), technologies: project.technologies ?? [] };
     data.projects.push(item);
-    this._save(data);
-    return { success: true, message: 'Project added!', data: item };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Project added!', data: item };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  updateProject(id, project) {
-    const data = this._load();
+  async updateProject(id, project) {
+    const data = await this._load();
     const idx = data.projects.findIndex(p => p.id === id);
     if (idx === -1) return { success: false, message: 'Project not found.' };
     data.projects[idx] = { ...data.projects[idx], ...project };
-    this._save(data);
-    return { success: true, message: 'Project updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Project updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  deleteProject(id) {
-    const data = this._load();
+  async deleteProject(id) {
+    const data = await this._load();
     data.projects = data.projects.filter(p => p.id !== id);
-    this._save(data);
-    return { success: true, message: 'Project deleted.' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Project deleted.' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── Education ──────────────────────────────────────────
 
-  getEducation() {
-    return this._load().education ?? [];
+  async getEducation() {
+    return (await this._load()).education ?? [];
   }
 
-  addEducation(edu) {
-    const data = this._load();
+  async addEducation(edu) {
+    const data = await this._load();
     const item = { ...edu, id: nextId(data.education) };
     data.education.push(item);
-    this._save(data);
-    return { success: true, message: 'Education entry added!', data: item };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Education entry added!', data: item };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  updateEducation(id, edu) {
-    const data = this._load();
+  async updateEducation(id, edu) {
+    const data = await this._load();
     const idx = data.education.findIndex(e => e.id === id);
     if (idx === -1) return { success: false, message: 'Education not found.' };
     data.education[idx] = { ...data.education[idx], ...edu };
-    this._save(data);
-    return { success: true, message: 'Education updated!' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Education updated!' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
-  deleteEducation(id) {
-    const data = this._load();
+  async deleteEducation(id) {
+    const data = await this._load();
     data.education = data.education.filter(e => e.id !== id);
-    this._save(data);
-    return { success: true, message: 'Education entry deleted.' };
+    try {
+      await this._save(data);
+      return { success: true, message: 'Education entry deleted.' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 
   // ── Import / Export ────────────────────────────────────
 
-  exportAll() {
-    return JSON.stringify(this._load(), null, 2);
+  async exportAll() {
+    const data = await this._load();
+    return JSON.stringify(data, null, 2);
   }
 
-  importAll(jsonString) {
+  async importAll(jsonString) {
     try {
       const data = JSON.parse(jsonString);
-      // Basic validation
       if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure');
-      this._save(data);
+      await this._save(data);
       return { success: true, message: 'Data imported successfully!' };
     } catch (e) {
       return { success: false, message: `Import failed: ${e.message}` };
     }
   }
 
-  reset() {
-    this._save(deepClone(DEFAULT_DATA));
-    return { success: true, message: 'Data reset to defaults.' };
-  }
-
-  // ── Full data ──────────────────────────────────────────
-
-  getAll() {
-    return this._load();
+  async reset() {
+    try {
+      await this._save(deepClone(DEFAULT_DATA));
+      return { success: true, message: 'Data reset to defaults.' };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
 }
 

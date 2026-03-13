@@ -34,3 +34,15 @@ export const ANIMATION_CONFIG = {
   loadingMinDuration: 1400,  // ms
   skillAnimDelay:     100,   // ms per skill
 };
+
+export const API_BASE = '';  // relative URLs, works with any host
+
+export const API_ENDPOINTS = {
+  data:         '/api/data',
+  authCheck:    '/api/auth/check',
+  authSetup:    '/api/auth/setup',
+  authLogin:    '/api/auth/login',
+  authLogout:   '/api/auth/logout',
+  authUsername: '/api/auth/username',
+  authPassword: '/api/auth/password',
+};
