@@ -1,748 +1,802 @@
-// Admin Dashboard JavaScript
-const authManager = new AuthManager();
-const dataManager = new DataManager();
+/**
+ * admin.js — Admin dashboard controller.
+ * Full CRUD operations, modals, toasts, import/export.
+ * All operations are async-aware for Web Crypto API usage.
+ */
 
-// Check authentication
-if (!authManager.isAuthenticated()) {
-    window.location.href = 'login.html';
+import { auth } from './auth.js';
+import { store } from './store.js';
+import { escapeHtml, $, $$, addClass, removeClass, toggleClass, downloadFile, readFile } from './utils.js';
+import { TOAST_DURATION_MS } from './config.js';
+import { measurePasswordStrength } from './crypto.js';
+
+// ── Auth Guard ────────────────────────────────────────────
+
+if (!auth.requireAuth()) {
+  // requireAuth() handles the redirect
+  throw new Error('Not authenticated');
 }
 
-// Initialize dashboard
+// ── Boot ──────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
-    initializeDashboard();
-    setupNavigation();
-    setupEventListeners();
-    loadAllData();
+  initTopbar();
+  initSidebar();
+  initLogout();
+  loadSection('dashboard');
+  bindSidebarNav();
+  bindModalClose();
 });
 
-function initializeDashboard() {
-    const currentUser = authManager.getCurrentUser();
-    document.getElementById('current-user').textContent = currentUser;
+// ── Topbar ────────────────────────────────────────────────
+
+function initTopbar() {
+  const usernameEl = document.getElementById('topbar-username');
+  const avatarEl   = document.getElementById('topbar-avatar');
+  const user = auth.getCurrentUser() ?? 'Admin';
+
+  if (usernameEl) usernameEl.textContent = user;
+  if (avatarEl)   avatarEl.textContent = user.charAt(0).toUpperCase();
 }
 
-// ==================== Navigation ====================
-function setupNavigation() {
-    const sidebarLinks = document.querySelectorAll('.sidebar-link[data-section]');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const sidebar = document.getElementById('sidebar');
-    
-    sidebarLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const section = link.dataset.section;
-            
-            // Update active link
-            sidebarLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            
-            // Show section
-            showSection(section);
-            
-            // Update page title
-            const title = link.textContent.trim();
-            document.getElementById('page-title').textContent = title;
-            
-            // Close mobile sidebar
-            sidebar.classList.remove('active');
-        });
+// ── Sidebar ───────────────────────────────────────────────
+
+function initSidebar() {
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebar-overlay');
+
+  const open = () => {
+    addClass(sidebar, 'is-open');
+    addClass(overlay, 'is-visible');
+  };
+
+  const close = () => {
+    removeClass(sidebar, 'is-open');
+    removeClass(overlay, 'is-visible');
+  };
+
+  if (toggleBtn) toggleBtn.addEventListener('click', () => {
+    sidebar.classList.contains('is-open') ? close() : open();
+  });
+
+  if (overlay) overlay.addEventListener('click', close);
+}
+
+function bindSidebarNav() {
+  const links = $$('.sidebar__link[data-section]');
+
+  links.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = link.dataset.section;
+      loadSection(section);
+
+      // Update active state
+      links.forEach(l => removeClass(l, 'is-active'));
+      addClass(link, 'is-active');
+
+      // Update topbar title
+      const titleEl = document.getElementById('topbar-title');
+      if (titleEl) titleEl.textContent = link.querySelector('span')?.textContent ?? section;
+
+      // Close mobile sidebar
+      removeClass(document.getElementById('sidebar'), 'is-open');
+      removeClass(document.getElementById('sidebar-overlay'), 'is-visible');
     });
-    
-    // Mobile sidebar toggle
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('active');
-        });
-    }
-    
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        if (confirm('Sei sicuro di voler uscire?')) {
-            authManager.logout();
-        }
+  });
+}
+
+// ── Logout ────────────────────────────────────────────────
+
+function initLogout() {
+  const btn = document.getElementById('logout-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to log out?')) {
+        auth.logout('../index.html');
+      }
     });
+  }
 }
 
-function showSection(sectionName) {
-    const sections = document.querySelectorAll('.content-section');
-    sections.forEach(section => {
-        section.classList.remove('active');
-        if (section.id === `section-${sectionName}`) {
-            section.classList.add('active');
-        }
-    });
+// ── Section Loader ────────────────────────────────────────
+
+function loadSection(name) {
+  // Hide all sections
+  $$('.content-section').forEach(s => removeClass(s, 'is-active'));
+
+  // Show target
+  const target = document.getElementById(`section-${name}`);
+  if (target) addClass(target, 'is-active');
+
+  // Load section data
+  switch (name) {
+    case 'dashboard':   loadDashboard();       break;
+    case 'personal':    loadPersonalForm();    break;
+    case 'about':       loadAboutForm();       break;
+    case 'experiences': loadExperiencesList(); break;
+    case 'skills':      loadSkillsList();      break;
+    case 'projects':    loadProjectsList();    break;
+    case 'education':   loadEducationList();   break;
+    case 'settings':    loadSettings();        break;
+  }
 }
 
-// ==================== Load All Data ====================
-function loadAllData() {
-    loadDashboardStats();
-    loadPersonalInfoForm();
-    loadAboutForm();
-    loadExperiencesList();
-    loadSkillsList();
-    loadProjectsList();
-    loadEducationList();
+// ── Dashboard ─────────────────────────────────────────────
+
+function loadDashboard() {
+  const data = store.getAll();
+  setText('stat-exp-count',      data.experiences?.length ?? 0);
+  setText('stat-skills-count',   data.skills?.length ?? 0);
+  setText('stat-projects-count', data.projects?.length ?? 0);
+  setText('stat-edu-count',      data.education?.length ?? 0);
 }
 
-function loadDashboardStats() {
-    const data = dataManager.getData();
-    document.getElementById('exp-count').textContent = data.experiences.length;
-    document.getElementById('skills-count').textContent = data.skills.length;
-    document.getElementById('projects-count').textContent = data.projects.length;
-    document.getElementById('edu-count').textContent = data.education.length;
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
 }
 
-// ==================== Personal Info ====================
-function loadPersonalInfoForm() {
-    const info = dataManager.getPersonalInfo();
-    document.getElementById('personal-name').value = info.name;
-    document.getElementById('personal-title').value = info.title;
-    document.getElementById('personal-description').value = info.description;
-    document.getElementById('personal-email').value = info.email;
-    document.getElementById('personal-discord').value = info.discord;
-    document.getElementById('personal-github').value = info.github;
-    document.getElementById('personal-years').value = info.yearsExperience;
-    document.getElementById('personal-projects').value = info.projectsCompleted;
+// ── Personal Info ─────────────────────────────────────────
+
+function loadPersonalForm() {
+  const info = store.getPersonalInfo();
+  setVal('personal-name',        info.name);
+  setVal('personal-title',       info.title);
+  setVal('personal-description', info.description);
+  setVal('personal-email',       info.email);
+  setVal('personal-discord',     info.discord);
+  setVal('personal-github',      info.github);
+  setVal('personal-kofi',        info.kofi);
+  setVal('personal-years',       info.yearsExperience);
+  setVal('personal-projects',    info.projectsCompleted);
+
+  const form = document.getElementById('personal-form');
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const result = store.updatePersonalInfo({
+        name:              getVal('personal-name'),
+        title:             getVal('personal-title'),
+        description:       getVal('personal-description'),
+        email:             getVal('personal-email'),
+        discord:           getVal('personal-discord'),
+        github:            getVal('personal-github'),
+        kofi:              getVal('personal-kofi'),
+        yearsExperience:   getVal('personal-years'),
+        projectsCompleted: getVal('personal-projects'),
+      });
+      showToast(result.message, result.success ? 'success' : 'error');
+    };
+  }
 }
 
-// ==================== About ====================
+// ── About ─────────────────────────────────────────────────
+
 function loadAboutForm() {
-    const about = dataManager.getAbout();
-    document.getElementById('about-text1').value = about.text1;
-    document.getElementById('about-text2').value = about.text2;
+  const about = store.getAbout();
+  setVal('about-text1', about.text1);
+  setVal('about-text2', about.text2);
+
+  const form = document.getElementById('about-form');
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const result = store.updateAbout({
+        text1: getVal('about-text1'),
+        text2: getVal('about-text2'),
+      });
+      showToast(result.message, result.success ? 'success' : 'error');
+    };
+  }
 }
 
-// ==================== Experiences ====================
+// ── Experiences ───────────────────────────────────────────
+
 function loadExperiencesList() {
-    const experiences = dataManager.getExperiences();
-    const list = document.getElementById('experiences-list');
-    
-    if (!list) {
-        console.error('Elemento experiences-list non trovato!');
-        return;
-    }
-    
-    list.innerHTML = '';
-    
-    if (!experiences || experiences.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Nessuna esperienza. Aggiungi la prima!</p>';
-        return;
-    }
-    
-    experiences.forEach(exp => {
-        const item = document.createElement('div');
-        item.className = 'item-card';
-        item.innerHTML = `
-            <div class="item-info">
-                <h3>${exp.title}</h3>
-                <p>${exp.period}</p>
-                <p>${exp.description}</p>
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-icon btn-primary" onclick="editExperience(${exp.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-icon btn-danger" onclick="deleteExperience(${exp.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        list.appendChild(item);
-    });
+  const list = document.getElementById('experiences-list');
+  if (!list) return;
+
+  const items = store.getExperiences();
+
+  if (items.length === 0) {
+    list.innerHTML = emptyState('No experiences yet. Click "Add Experience" to get started.');
+    return;
+  }
+
+  list.innerHTML = items.map(exp => `
+    <div class="item-card">
+      <div class="item-card__info">
+        <p class="item-card__title">${escapeHtml(exp.title)}</p>
+        <p class="item-card__meta">${escapeHtml(exp.period)}</p>
+        <p class="item-card__desc">${escapeHtml(exp.description)}</p>
+      </div>
+      <div class="item-card__actions">
+        <button class="btn btn--primary btn--icon" title="Edit" onclick="window._admin.editExperience(${exp.id})">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn--danger btn--icon" title="Delete" onclick="window._admin.deleteExperience(${exp.id})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  bindAddBtn('add-experience-btn', () => showAddExperienceModal());
 }
 
-function addExperience() {
-    showModal('Aggiungi Esperienza', `
-        <form id="experience-form" class="admin-form">
-            <div class="form-group">
-                <label for="exp-title">Titolo</label>
-                <input type="text" id="exp-title" required>
-            </div>
-            <div class="form-group">
-                <label for="exp-period">Periodo</label>
-                <input type="text" id="exp-period" placeholder="es. 2022 - Present" required>
-            </div>
-            <div class="form-group">
-                <label for="exp-description">Descrizione</label>
-                <textarea id="exp-description" rows="4" required></textarea>
-            </div>
-            <button type="submit" class="btn btn-success btn-block">
-                <i class="fas fa-plus"></i> Aggiungi
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('experience-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.addExperience({
-            title: document.getElementById('exp-title').value,
-            period: document.getElementById('exp-period').value,
-            description: document.getElementById('exp-description').value
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadExperiencesList();
-        loadDashboardStats();
-    });
+function showAddExperienceModal(existingExp = null) {
+  const isEdit = !!existingExp;
+  const exp = existingExp ?? { title: '', period: '', description: '' };
+
+  showModal(isEdit ? 'Edit Experience' : 'Add Experience', `
+    <form id="exp-modal-form" class="admin-form">
+      <div class="form-group">
+        <label class="form-label" for="m-exp-title">Title</label>
+        <input class="form-input" type="text" id="m-exp-title" value="${escapeHtml(exp.title)}" placeholder="e.g. Freelance Developer" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-exp-period">Period</label>
+        <input class="form-input" type="text" id="m-exp-period" value="${escapeHtml(exp.period)}" placeholder="e.g. 2022 - Present" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-exp-desc">Description</label>
+        <textarea class="form-input form-textarea" id="m-exp-desc" rows="4" required>${escapeHtml(exp.description)}</textarea>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">
+        <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Save Changes' : 'Add Experience'}
+      </button>
+    </form>
+  `);
+
+  document.getElementById('exp-modal-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const payload = {
+      title:       getVal('m-exp-title'),
+      period:      getVal('m-exp-period'),
+      description: getVal('m-exp-desc'),
+    };
+
+    const result = isEdit
+      ? store.updateExperience(existingExp.id, payload)
+      : store.addExperience(payload);
+
+    closeModal();
+    showToast(result.message, result.success ? 'success' : 'error');
+    loadExperiencesList();
+    loadDashboard();
+  });
 }
 
-function editExperience(id) {
-    const experiences = dataManager.getExperiences();
-    const exp = experiences.find(e => e.id === id);
-    
-    showModal('Modifica Esperienza', `
-        <form id="experience-form" class="admin-form">
-            <div class="form-group">
-                <label for="exp-title">Titolo</label>
-                <input type="text" id="exp-title" value="${exp.title}" required>
-            </div>
-            <div class="form-group">
-                <label for="exp-period">Periodo</label>
-                <input type="text" id="exp-period" value="${exp.period}" required>
-            </div>
-            <div class="form-group">
-                <label for="exp-description">Descrizione</label>
-                <textarea id="exp-description" rows="4" required>${exp.description}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-save"></i> Salva
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('experience-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.updateExperience(id, {
-            title: document.getElementById('exp-title').value,
-            period: document.getElementById('exp-period').value,
-            description: document.getElementById('exp-description').value
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadExperiencesList();
-    });
-}
+// ── Skills ────────────────────────────────────────────────
 
-function deleteExperience(id) {
-    if (confirm('Sei sicuro di voler eliminare questa esperienza?')) {
-        const result = dataManager.deleteExperience(id);
-        showToast(result.message, 'success');
-        loadExperiencesList();
-        loadDashboardStats();
-    }
-}
-
-// ==================== Skills ====================
 function loadSkillsList() {
-    const skills = dataManager.getSkills();
-    const list = document.getElementById('skills-list');
-    list.innerHTML = '';
-    
-    if (skills.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Nessuna skill. Aggiungi la prima!</p>';
-        return;
-    }
-    
-    skills.forEach(skill => {
-        const item = document.createElement('div');
-        item.className = 'item-card';
-        item.innerHTML = `
-            <div class="item-info">
-                <h3>${skill.name}</h3>
-                <div class="skill-bar" style="margin-top: 0.5rem;">
-                    <div class="skill-progress" style="width: ${skill.level}%">
-                        <span class="skill-percentage">${skill.level}%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-icon btn-primary" onclick="editSkill(${skill.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-icon btn-danger" onclick="deleteSkill(${skill.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        list.appendChild(item);
-    });
+  const list = document.getElementById('skills-list');
+  if (!list) return;
+
+  const items = store.getSkills();
+
+  if (items.length === 0) {
+    list.innerHTML = emptyState('No skills yet. Click "Add Skill" to get started.');
+    return;
+  }
+
+  list.innerHTML = items.map(skill => `
+    <div class="item-card">
+      <div class="item-card__info">
+        <p class="item-card__title">${escapeHtml(skill.name)}</p>
+        <div class="progress-bar" style="margin-top: var(--space-2);">
+          <div class="progress-bar__fill" style="width: ${skill.level}%;"></div>
+        </div>
+        <p class="item-card__meta" style="margin-top: var(--space-1);">${skill.level}%</p>
+      </div>
+      <div class="item-card__actions">
+        <button class="btn btn--primary btn--icon" title="Edit" onclick="window._admin.editSkill(${skill.id})">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn--danger btn--icon" title="Delete" onclick="window._admin.deleteSkill(${skill.id})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  bindAddBtn('add-skill-btn', () => showAddSkillModal());
 }
 
-function addSkill() {
-    showModal('Aggiungi Skill', `
-        <form id="skill-form" class="admin-form">
-            <div class="form-group">
-                <label for="skill-name">Nome Skill</label>
-                <input type="text" id="skill-name" required>
-            </div>
-            <div class="form-group">
-                <label for="skill-level">Livello (0-100)</label>
-                <input type="number" id="skill-level" min="0" max="100" value="50" required>
-            </div>
-            <button type="submit" class="btn btn-success btn-block">
-                <i class="fas fa-plus"></i> Aggiungi
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('skill-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.addSkill({
-            name: document.getElementById('skill-name').value,
-            level: parseInt(document.getElementById('skill-level').value)
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadSkillsList();
-        loadDashboardStats();
-    });
+function showAddSkillModal(existingSkill = null) {
+  const isEdit = !!existingSkill;
+  const skill = existingSkill ?? { name: '', level: 50 };
+
+  showModal(isEdit ? 'Edit Skill' : 'Add Skill', `
+    <form id="skill-modal-form" class="admin-form">
+      <div class="form-group">
+        <label class="form-label" for="m-skill-name">Skill Name</label>
+        <input class="form-input" type="text" id="m-skill-name" value="${escapeHtml(skill.name)}" placeholder="e.g. JavaScript" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-skill-level">Level (0–100)</label>
+        <input class="form-input" type="number" id="m-skill-level" min="0" max="100" value="${skill.level}" required>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">
+        <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Save Changes' : 'Add Skill'}
+      </button>
+    </form>
+  `);
+
+  document.getElementById('skill-modal-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const payload = {
+      name:  getVal('m-skill-name'),
+      level: parseInt(getVal('m-skill-level'), 10),
+    };
+
+    const result = isEdit
+      ? store.updateSkill(existingSkill.id, payload)
+      : store.addSkill(payload);
+
+    closeModal();
+    showToast(result.message, result.success ? 'success' : 'error');
+    loadSkillsList();
+    loadDashboard();
+  });
 }
 
-function editSkill(id) {
-    const skills = dataManager.getSkills();
-    const skill = skills.find(s => s.id === id);
-    
-    showModal('Modifica Skill', `
-        <form id="skill-form" class="admin-form">
-            <div class="form-group">
-                <label for="skill-name">Nome Skill</label>
-                <input type="text" id="skill-name" value="${skill.name}" required>
-            </div>
-            <div class="form-group">
-                <label for="skill-level">Livello (0-100)</label>
-                <input type="number" id="skill-level" min="0" max="100" value="${skill.level}" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-save"></i> Salva
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('skill-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.updateSkill(id, {
-            name: document.getElementById('skill-name').value,
-            level: parseInt(document.getElementById('skill-level').value)
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadSkillsList();
-    });
-}
+// ── Projects ──────────────────────────────────────────────
 
-function deleteSkill(id) {
-    if (confirm('Sei sicuro di voler eliminare questa skill?')) {
-        const result = dataManager.deleteSkill(id);
-        showToast(result.message, 'success');
-        loadSkillsList();
-        loadDashboardStats();
-    }
-}
-
-// ==================== Projects ====================
 function loadProjectsList() {
-    const projects = dataManager.getProjects();
-    const list = document.getElementById('projects-list');
-    list.innerHTML = '';
-    
-    if (projects.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Nessun progetto. Aggiungi il primo!</p>';
-        return;
-    }
-    
-    projects.forEach(project => {
-        const techTags = project.technologies && project.technologies.length > 0
-            ? project.technologies.map(tech => `<span class="tech-tag">${tech}</span>`).join('')
-            : '';
-        
-        const item = document.createElement('div');
-        item.className = 'item-card';
-        item.innerHTML = `
-            <div class="item-info">
-                <h3>${project.title}</h3>
-                <p>${project.description}</p>
-                ${project.link ? `<p><a href="${project.link}" target="_blank" style="color: var(--accent-primary);">${project.link}</a></p>` : ''}
-                ${techTags ? `<div class="item-meta">${techTags}</div>` : ''}
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-icon btn-primary" onclick="editProject(${project.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-icon btn-danger" onclick="deleteProject(${project.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        list.appendChild(item);
-    });
+  const list = document.getElementById('projects-list');
+  if (!list) return;
+
+  const items = store.getProjects();
+
+  if (items.length === 0) {
+    list.innerHTML = emptyState('No projects yet. Click "Add Project" to get started.');
+    return;
+  }
+
+  list.innerHTML = items.map(project => {
+    const tags = (project.technologies ?? [])
+      .map(t => `<span class="tech-tag">${escapeHtml(t)}</span>`)
+      .join('');
+
+    return `
+      <div class="item-card">
+        <div class="item-card__info">
+          <p class="item-card__title">${escapeHtml(project.title)}</p>
+          <p class="item-card__desc">${escapeHtml(project.description)}</p>
+          ${project.link ? `<p class="item-card__link"><a href="${escapeHtml(project.link)}" target="_blank" rel="noopener">${escapeHtml(project.link)}</a></p>` : ''}
+          ${tags ? `<div class="item-card__tags" style="margin-top: var(--space-2);">${tags}</div>` : ''}
+        </div>
+        <div class="item-card__actions">
+          <button class="btn btn--primary btn--icon" title="Edit" onclick="window._admin.editProject(${project.id})">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn--danger btn--icon" title="Delete" onclick="window._admin.deleteProject(${project.id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  bindAddBtn('add-project-btn', () => showAddProjectModal());
 }
 
-function addProject() {
-    showModal('Aggiungi Progetto', `
-        <form id="project-form" class="admin-form">
-            <div class="form-group">
-                <label for="project-title">Titolo</label>
-                <input type="text" id="project-title" required>
-            </div>
-            <div class="form-group">
-                <label for="project-description">Descrizione</label>
-                <textarea id="project-description" rows="3" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="project-link">Link (opzionale)</label>
-                <input type="url" id="project-link" placeholder="https://">
-            </div>
-            <div class="form-group">
-                <label for="project-tech">Tecnologie (separate da virgola)</label>
-                <input type="text" id="project-tech" placeholder="HTML, CSS, JavaScript">
-            </div>
-            <button type="submit" class="btn btn-success btn-block">
-                <i class="fas fa-plus"></i> Aggiungi
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('project-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const techInput = document.getElementById('project-tech').value;
-        const technologies = techInput ? techInput.split(',').map(t => t.trim()).filter(t => t) : [];
-        
-        const result = dataManager.addProject({
-            title: document.getElementById('project-title').value,
-            description: document.getElementById('project-description').value,
-            link: document.getElementById('project-link').value,
-            technologies: technologies
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadProjectsList();
-        loadDashboardStats();
-    });
+function showAddProjectModal(existingProject = null) {
+  const isEdit = !!existingProject;
+  const project = existingProject ?? { title: '', description: '', link: '', technologies: [] };
+  const techString = (project.technologies ?? []).join(', ');
+
+  showModal(isEdit ? 'Edit Project' : 'Add Project', `
+    <form id="project-modal-form" class="admin-form">
+      <div class="form-group">
+        <label class="form-label" for="m-proj-title">Title</label>
+        <input class="form-input" type="text" id="m-proj-title" value="${escapeHtml(project.title)}" placeholder="Project name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-proj-desc">Description</label>
+        <textarea class="form-input form-textarea" id="m-proj-desc" rows="3" required>${escapeHtml(project.description)}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-proj-link">Link (optional)</label>
+        <input class="form-input" type="url" id="m-proj-link" value="${escapeHtml(project.link ?? '')}" placeholder="https://github.com/...">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-proj-tech">Technologies (comma-separated)</label>
+        <input class="form-input" type="text" id="m-proj-tech" value="${escapeHtml(techString)}" placeholder="HTML, CSS, JavaScript">
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">
+        <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Save Changes' : 'Add Project'}
+      </button>
+    </form>
+  `);
+
+  document.getElementById('project-modal-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const techInput = getVal('m-proj-tech');
+    const technologies = techInput
+      ? techInput.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
+    const payload = {
+      title:       getVal('m-proj-title'),
+      description: getVal('m-proj-desc'),
+      link:        getVal('m-proj-link'),
+      technologies,
+    };
+
+    const result = isEdit
+      ? store.updateProject(existingProject.id, payload)
+      : store.addProject(payload);
+
+    closeModal();
+    showToast(result.message, result.success ? 'success' : 'error');
+    loadProjectsList();
+    loadDashboard();
+  });
 }
 
-function editProject(id) {
-    const projects = dataManager.getProjects();
-    const project = projects.find(p => p.id === id);
-    const techString = project.technologies ? project.technologies.join(', ') : '';
-    
-    showModal('Modifica Progetto', `
-        <form id="project-form" class="admin-form">
-            <div class="form-group">
-                <label for="project-title">Titolo</label>
-                <input type="text" id="project-title" value="${project.title}" required>
-            </div>
-            <div class="form-group">
-                <label for="project-description">Descrizione</label>
-                <textarea id="project-description" rows="3" required>${project.description}</textarea>
-            </div>
-            <div class="form-group">
-                <label for="project-link">Link (opzionale)</label>
-                <input type="url" id="project-link" value="${project.link || ''}" placeholder="https://">
-            </div>
-            <div class="form-group">
-                <label for="project-tech">Tecnologie (separate da virgola)</label>
-                <input type="text" id="project-tech" value="${techString}" placeholder="HTML, CSS, JavaScript">
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-save"></i> Salva
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('project-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const techInput = document.getElementById('project-tech').value;
-        const technologies = techInput ? techInput.split(',').map(t => t.trim()).filter(t => t) : [];
-        
-        const result = dataManager.updateProject(id, {
-            title: document.getElementById('project-title').value,
-            description: document.getElementById('project-description').value,
-            link: document.getElementById('project-link').value,
-            technologies: technologies
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadProjectsList();
-    });
-}
+// ── Education ─────────────────────────────────────────────
 
-function deleteProject(id) {
-    if (confirm('Sei sicuro di voler eliminare questo progetto?')) {
-        const result = dataManager.deleteProject(id);
-        showToast(result.message, 'success');
-        loadProjectsList();
-        loadDashboardStats();
-    }
-}
-
-// ==================== Education ====================
 function loadEducationList() {
-    const education = dataManager.getEducation();
-    const list = document.getElementById('education-list');
-    list.innerHTML = '';
-    
-    if (education.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Nessuna educazione. Aggiungi la prima!</p>';
+  const list = document.getElementById('education-list');
+  if (!list) return;
+
+  const items = store.getEducation();
+
+  if (items.length === 0) {
+    list.innerHTML = emptyState('No education entries yet. Click "Add Education" to get started.');
+    return;
+  }
+
+  list.innerHTML = items.map(edu => `
+    <div class="item-card">
+      <div class="item-card__info">
+        <p class="item-card__title">${escapeHtml(edu.title)}</p>
+        <p class="item-card__meta">${escapeHtml(edu.period)}</p>
+        <p class="item-card__desc">${escapeHtml(edu.description)}</p>
+      </div>
+      <div class="item-card__actions">
+        <button class="btn btn--primary btn--icon" title="Edit" onclick="window._admin.editEducation(${edu.id})">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn--danger btn--icon" title="Delete" onclick="window._admin.deleteEducation(${edu.id})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  bindAddBtn('add-education-btn', () => showAddEducationModal());
+}
+
+function showAddEducationModal(existingEdu = null) {
+  const isEdit = !!existingEdu;
+  const edu = existingEdu ?? { title: '', period: '', description: '' };
+
+  showModal(isEdit ? 'Edit Education' : 'Add Education', `
+    <form id="edu-modal-form" class="admin-form">
+      <div class="form-group">
+        <label class="form-label" for="m-edu-title">Title</label>
+        <input class="form-input" type="text" id="m-edu-title" value="${escapeHtml(edu.title)}" placeholder="e.g. Self-Taught Developer" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-edu-period">Period</label>
+        <input class="form-input" type="text" id="m-edu-period" value="${escapeHtml(edu.period)}" placeholder="e.g. 2020 - Present" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-edu-desc">Description</label>
+        <textarea class="form-input form-textarea" id="m-edu-desc" rows="4" required>${escapeHtml(edu.description)}</textarea>
+      </div>
+      <button type="submit" class="btn btn--primary btn--block">
+        <i class="fas fa-${isEdit ? 'save' : 'plus'}"></i> ${isEdit ? 'Save Changes' : 'Add Education'}
+      </button>
+    </form>
+  `);
+
+  document.getElementById('edu-modal-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const payload = {
+      title:       getVal('m-edu-title'),
+      period:      getVal('m-edu-period'),
+      description: getVal('m-edu-desc'),
+    };
+
+    const result = isEdit
+      ? store.updateEducation(existingEdu.id, payload)
+      : store.addEducation(payload);
+
+    closeModal();
+    showToast(result.message, result.success ? 'success' : 'error');
+    loadEducationList();
+    loadDashboard();
+  });
+}
+
+// ── Settings ──────────────────────────────────────────────
+
+function loadSettings() {
+  // Change Username
+  const usernameForm = document.getElementById('change-username-form');
+  if (usernameForm) {
+    usernameForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const newUsername = getVal('new-username');
+      const confirmPass = getVal('confirm-password-for-username');
+
+      const result = await auth.changeUsername(newUsername, confirmPass);
+      showToast(result.message, result.success ? 'success' : 'error');
+
+      if (result.success) {
+        usernameForm.reset();
+        document.getElementById('topbar-username').textContent = newUsername;
+        document.getElementById('topbar-avatar').textContent  = newUsername.charAt(0).toUpperCase();
+      }
+    };
+  }
+
+  // Change Password
+  const passwordForm = document.getElementById('change-password-form');
+  if (passwordForm) {
+    passwordForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const currentPass = getVal('current-password');
+      const newPass     = getVal('new-password');
+      const confirmPass = getVal('confirm-new-password');
+
+      if (newPass !== confirmPass) {
+        showToast('New passwords do not match.', 'error');
         return;
+      }
+
+      const result = await auth.changePassword(currentPass, newPass);
+      showToast(result.message, result.success ? 'success' : 'error');
+      if (result.success) passwordForm.reset();
+    };
+
+    // Password strength meter
+    const newPassInput = document.getElementById('new-password');
+    if (newPassInput) {
+      newPassInput.addEventListener('input', () => {
+        updatePasswordStrength('settings-strength', newPassInput.value);
+      });
     }
-    
-    education.forEach(edu => {
-        const item = document.createElement('div');
-        item.className = 'item-card';
-        item.innerHTML = `
-            <div class="item-info">
-                <h3>${edu.title}</h3>
-                <p>${edu.period}</p>
-                <p>${edu.description}</p>
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-icon btn-primary" onclick="editEducation(${edu.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-icon btn-danger" onclick="deleteEducation(${edu.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        list.appendChild(item);
-    });
+  }
+
+  // Export
+  const exportBtn = document.getElementById('export-data-btn');
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      const json = store.exportAll();
+      const date = new Date().toISOString().split('T')[0];
+      downloadFile(json, `portfolio-data-${date}.json`);
+      showToast('Data exported successfully!', 'success');
+    };
+  }
+
+  // Import
+  const importBtn = document.getElementById('import-data-btn');
+  if (importBtn) {
+    importBtn.onclick = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await readFile(file);
+          const result = store.importAll(text);
+          showToast(result.message, result.success ? 'success' : 'error');
+          if (result.success) loadSection('dashboard');
+        } catch (err) {
+          showToast(`Import error: ${err.message}`, 'error');
+        }
+      };
+      input.click();
+    };
+  }
+
+  // Reset
+  const resetBtn = document.getElementById('reset-data-btn');
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      if (confirm('Reset ALL portfolio data to defaults? This cannot be undone.')) {
+        const result = store.reset();
+        showToast(result.message, 'warning');
+        loadSection('dashboard');
+      }
+    };
+  }
 }
 
-function addEducation() {
-    showModal('Aggiungi Educazione', `
-        <form id="education-form" class="admin-form">
-            <div class="form-group">
-                <label for="edu-title">Titolo</label>
-                <input type="text" id="edu-title" required>
-            </div>
-            <div class="form-group">
-                <label for="edu-period">Periodo</label>
-                <input type="text" id="edu-period" placeholder="es. 2020 - Present" required>
-            </div>
-            <div class="form-group">
-                <label for="edu-description">Descrizione</label>
-                <textarea id="edu-description" rows="4" required></textarea>
-            </div>
-            <button type="submit" class="btn btn-success btn-block">
-                <i class="fas fa-plus"></i> Aggiungi
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('education-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.addEducation({
-            title: document.getElementById('edu-title').value,
-            period: document.getElementById('edu-period').value,
-            description: document.getElementById('edu-description').value
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadEducationList();
-        loadDashboardStats();
-    });
-}
+// ── Global onclick handlers ───────────────────────────────
+// These are called from innerHTML onclick attributes
 
-function editEducation(id) {
-    const education = dataManager.getEducation();
-    const edu = education.find(e => e.id === id);
-    
-    showModal('Modifica Educazione', `
-        <form id="education-form" class="admin-form">
-            <div class="form-group">
-                <label for="edu-title">Titolo</label>
-                <input type="text" id="edu-title" value="${edu.title}" required>
-            </div>
-            <div class="form-group">
-                <label for="edu-period">Periodo</label>
-                <input type="text" id="edu-period" value="${edu.period}" required>
-            </div>
-            <div class="form-group">
-                <label for="edu-description">Descrizione</label>
-                <textarea id="edu-description" rows="4" required>${edu.description}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-save"></i> Salva
-            </button>
-        </form>
-    `);
-    
-    document.getElementById('education-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.updateEducation(id, {
-            title: document.getElementById('edu-title').value,
-            period: document.getElementById('edu-period').value,
-            description: document.getElementById('edu-description').value
-        });
-        closeModal();
-        showToast(result.message, 'success');
-        loadEducationList();
-    });
-}
-
-function deleteEducation(id) {
-    if (confirm('Sei sicuro di voler eliminare questa educazione?')) {
-        const result = dataManager.deleteEducation(id);
-        showToast(result.message, 'success');
-        loadEducationList();
-        loadDashboardStats();
+window._admin = {
+  editExperience: (id) => {
+    const exp = store.getExperiences().find(e => e.id === id);
+    if (exp) showAddExperienceModal(exp);
+  },
+  deleteExperience: (id) => {
+    if (confirm('Delete this experience?')) {
+      const result = store.deleteExperience(id);
+      showToast(result.message, 'success');
+      loadExperiencesList();
+      loadDashboard();
     }
-}
+  },
+  editSkill: (id) => {
+    const skill = store.getSkills().find(s => s.id === id);
+    if (skill) showAddSkillModal(skill);
+  },
+  deleteSkill: (id) => {
+    if (confirm('Delete this skill?')) {
+      const result = store.deleteSkill(id);
+      showToast(result.message, 'success');
+      loadSkillsList();
+      loadDashboard();
+    }
+  },
+  editProject: (id) => {
+    const project = store.getProjects().find(p => p.id === id);
+    if (project) showAddProjectModal(project);
+  },
+  deleteProject: (id) => {
+    if (confirm('Delete this project?')) {
+      const result = store.deleteProject(id);
+      showToast(result.message, 'success');
+      loadProjectsList();
+      loadDashboard();
+    }
+  },
+  editEducation: (id) => {
+    const edu = store.getEducation().find(e => e.id === id);
+    if (edu) showAddEducationModal(edu);
+  },
+  deleteEducation: (id) => {
+    if (confirm('Delete this education entry?')) {
+      const result = store.deleteEducation(id);
+      showToast(result.message, 'success');
+      loadEducationList();
+      loadDashboard();
+    }
+  },
+};
 
-// ==================== Event Listeners ====================
-function setupEventListeners() {
-    // Personal Info Form
-    document.getElementById('personal-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.updatePersonalInfo({
-            name: document.getElementById('personal-name').value,
-            title: document.getElementById('personal-title').value,
-            description: document.getElementById('personal-description').value,
-            email: document.getElementById('personal-email').value,
-            discord: document.getElementById('personal-discord').value,
-            github: document.getElementById('personal-github').value,
-            yearsExperience: document.getElementById('personal-years').value,
-            projectsCompleted: document.getElementById('personal-projects').value
-        });
-        showToast(result.message, 'success');
-    });
-    
-    // About Form
-    document.getElementById('about-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const result = dataManager.updateAbout({
-            text1: document.getElementById('about-text1').value,
-            text2: document.getElementById('about-text2').value
-        });
-        showToast(result.message, 'success');
-    });
-    
-    // Add buttons
-    document.getElementById('add-experience-btn').addEventListener('click', addExperience);
-    document.getElementById('add-skill-btn').addEventListener('click', addSkill);
-    document.getElementById('add-project-btn').addEventListener('click', addProject);
-    document.getElementById('add-education-btn').addEventListener('click', addEducation);
-    
-    // Settings
-    setupSettingsListeners();
-}
+// ── Modal ─────────────────────────────────────────────────
 
-function setupSettingsListeners() {
-    // Change Username
-    document.getElementById('change-username-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const newUsername = document.getElementById('new-username').value;
-        const password = document.getElementById('confirm-password-username').value;
-        
-        const result = authManager.changeUsername(newUsername, password);
-        showToast(result.message, result.success ? 'success' : 'error');
-        
-        if (result.success) {
-            document.getElementById('current-user').textContent = newUsername;
-            document.getElementById('change-username-form').reset();
-        }
-    });
-    
-    // Change Password
-    document.getElementById('change-password-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const oldPassword = document.getElementById('old-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        
-        if (newPassword !== confirmPassword) {
-            showToast('Le password non corrispondono!', 'error');
-            return;
-        }
-        
-        const result = authManager.changePassword(oldPassword, newPassword);
-        showToast(result.message, result.success ? 'success' : 'error');
-        
-        if (result.success) {
-            document.getElementById('change-password-form').reset();
-        }
-    });
-    
-    // Export Data
-    document.getElementById('export-data-btn').addEventListener('click', () => {
-        const data = dataManager.exportData();
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `portfolio-data-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Dati esportati con successo!', 'success');
-    });
-    
-    // Import Data
-    document.getElementById('import-data-btn').addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'application/json';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const result = dataManager.importData(event.target.result);
-                showToast(result.message, result.success ? 'success' : 'error');
-                if (result.success) {
-                    loadAllData();
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
-    });
-    
-    // Reset Data
-    document.getElementById('reset-data-btn').addEventListener('click', () => {
-        if (confirm('Sei sicuro di voler resettare tutti i dati? Questa azione non può essere annullata!')) {
-            const result = dataManager.resetData();
-            showToast(result.message, 'warning');
-            loadAllData();
-        }
-    });
-}
+function showModal(title, bodyHtml) {
+  const modal     = document.getElementById('modal');
+  const titleEl   = document.getElementById('modal-title');
+  const bodyEl    = document.getElementById('modal-body');
 
-// ==================== Modal ====================
-function showModal(title, content) {
-    const modal = document.getElementById('modal');
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = content;
-    modal.classList.add('active');
+  if (!modal) return;
+
+  if (titleEl) titleEl.textContent = title;
+  if (bodyEl)  bodyEl.innerHTML = bodyHtml;
+
+  addClass(modal, 'is-open');
+  document.body.style.overflow = 'hidden';
+
+  // Auto-focus first input
+  setTimeout(() => {
+    const first = modal.querySelector('input, textarea, select');
+    if (first) first.focus();
+  }, 100);
 }
 
 function closeModal() {
-    const modal = document.getElementById('modal');
-    modal.classList.remove('active');
+  const modal = document.getElementById('modal');
+  if (!modal) return;
+  removeClass(modal, 'is-open');
+  document.body.style.overflow = '';
 }
 
-document.getElementById('modal-close').addEventListener('click', closeModal);
+function bindModalClose() {
+  const closeBtn = document.getElementById('modal-close');
+  const modal    = document.getElementById('modal');
 
-document.getElementById('modal').addEventListener('click', (e) => {
-    if (e.target.id === 'modal') {
-        closeModal();
-    }
-});
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
 
-// ==================== Toast ====================
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  // ESC key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────
+
+const TOAST_ICONS = {
+  success: 'fas fa-check-circle',
+  error:   'fas fa-times-circle',
+  warning: 'fas fa-exclamation-triangle',
+  info:    'fas fa-info-circle',
+};
+
 function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast show ${type}`;
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast--${type}`;
+  toast.innerHTML = `
+    <i class="toast__icon ${TOAST_ICONS[type] ?? TOAST_ICONS.info}"></i>
+    <span class="toast__message">${escapeHtml(message)}</span>
+    <button class="toast__close" aria-label="Close"><i class="fas fa-times"></i></button>
+  `;
+
+  container.appendChild(toast);
+
+  const dismiss = () => {
+    addClass(toast, 'is-hiding');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    setTimeout(() => toast.remove(), 600);
+  };
+
+  toast.querySelector('.toast__close')?.addEventListener('click', dismiss);
+  setTimeout(dismiss, TOAST_DURATION_MS);
 }
 
-// Make functions global for onclick handlers
-window.editExperience = editExperience;
-window.deleteExperience = deleteExperience;
-window.editSkill = editSkill;
-window.deleteSkill = deleteSkill;
-window.editProject = editProject;
-window.deleteProject = deleteProject;
-window.editEducation = editEducation;
-window.deleteEducation = deleteEducation;
+// ── Password Strength ─────────────────────────────────────
+
+function updatePasswordStrength(wrapperId, password) {
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return;
+
+  const { score, label } = measurePasswordStrength(password);
+  const bars  = wrapper.querySelectorAll('.password-strength__bar');
+  const lbl   = wrapper.querySelector('.password-strength__label');
+
+  const classes = ['is-weak', 'is-medium', 'is-strong'];
+
+  bars.forEach((bar, i) => {
+    bar.className = 'password-strength__bar';
+    if (i < score) addClass(bar, classes[score - 1]);
+  });
+
+  if (lbl) lbl.textContent = password ? label : '';
+}
+
+// ── Helpers ───────────────────────────────────────────────
+
+function getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val ?? '';
+}
+
+function emptyState(message) {
+  return `
+    <div class="empty-state">
+      <i class="fas fa-inbox"></i>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
+}
+
+// Bind the "Add" button (re-bind to avoid duplicate listeners)
+const _addBtnListeners = new WeakMap();
+
+function bindAddBtn(id, handler) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+
+  if (_addBtnListeners.has(btn)) {
+    btn.removeEventListener('click', _addBtnListeners.get(btn));
+  }
+  _addBtnListeners.set(btn, handler);
+  btn.addEventListener('click', handler);
+}

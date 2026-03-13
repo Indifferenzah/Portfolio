@@ -1,167 +1,184 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Portfolio</title>
-    <link rel="stylesheet" href="../css/admin.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — Portfolio</title>
+  <meta name="robots" content="noindex, nofollow">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/admin.css">
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
-    
-    <div class="login-page">
-        <div class="login-box">
-            <div class="login-header">
-                <div class="icon-wrapper">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h1>Admin Panel</h1>
-                <p>Accedi alla dashboard amministrativa</p>
-            </div>
-            
-            <form id="login-form">
-                <div class="input-group">
-                    <div class="input-icon">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        placeholder="Username"
-                        required
-                        autocomplete="username"
-                    >
-                </div>
-                
-                <div class="input-group">
-                    <div class="input-icon">
-                        <i class="fas fa-lock"></i>
-                    </div>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        placeholder="Password"
-                        required
-                        autocomplete="current-password"
-                    >
-                </div>
-                
-                <div id="error-message" class="error-msg"></div>
-                
-                <button type="submit" class="login-btn">
-                    <span>Accedi</span>
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-            </form>
-            
-            <a href="../index.html" class="back-link">
-                <i class="fas fa-arrow-left"></i>
-                <span>Torna al Portfolio</span>
-            </a>
+
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="auth-page">
+    <div class="auth-box" role="main">
+      <div class="auth-box__header">
+        <div class="auth-box__icon">
+          <i class="fas fa-shield-alt" aria-hidden="true"></i>
         </div>
+        <h1 class="auth-box__title">Admin Panel</h1>
+        <p class="auth-box__subtitle">Sign in to manage your portfolio</p>
+      </div>
+
+      <div class="auth-error" id="login-error" role="alert">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        <span id="login-error-text"></span>
+      </div>
+
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="login-username">Username</label>
+          <div class="input-wrapper">
+            <i class="input-wrapper__icon fas fa-user" aria-hidden="true"></i>
+            <input
+              class="form-input"
+              type="text"
+              id="login-username"
+              name="username"
+              placeholder="Your username"
+              autocomplete="username"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <div class="input-wrapper">
+            <i class="input-wrapper__icon fas fa-lock" aria-hidden="true"></i>
+            <input
+              class="form-input"
+              type="password"
+              id="login-password"
+              name="password"
+              placeholder="Your password"
+              autocomplete="current-password"
+              required
+            >
+            <button
+              type="button"
+              id="toggle-password"
+              style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--color-text-muted); cursor:pointer; padding:4px;"
+              aria-label="Toggle password visibility"
+            >
+              <i class="fas fa-eye" id="toggle-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block btn--lg" id="login-submit">
+          <span id="login-btn-text"><i class="fas fa-sign-in-alt"></i> Sign In</span>
+          <span id="login-btn-loading" style="display:none;"><span class="spinner"></span> Signing in...</span>
+        </button>
+      </form>
+
+      <a href="../index.html" class="auth-box__back">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        Back to Portfolio
+      </a>
     </div>
-    
-    <script src="../js/auth.js"></script>
-    <script>
-        // Reset credenziali vecchie
-        const oldCreds = localStorage.getItem('portfolio_credentials');
-        if (oldCreds) {
-            const parsed = JSON.parse(oldCreds);
-            if (parsed.username === 'admin') {
-                localStorage.removeItem('portfolio_credentials');
-                localStorage.removeItem('portfolio_auth');
-            }
+  </div>
+
+  <script type="module">
+    import { auth } from '../js/auth.js';
+    import { ParticleSystem } from '../js/particles.js';
+
+    // Guard: redirect to setup if no credentials, or to dashboard if already logged in
+    if (!auth.guardLogin()) {
+      // guardLogin handles redirects
+    }
+
+    // Particle background
+    const canvas = document.getElementById('bg-canvas');
+    if (canvas) {
+      const ps = new ParticleSystem(canvas, { count: 50 });
+      ps.init();
+    }
+
+    // Toggle password visibility
+    const passwordInput = document.getElementById('login-password');
+    const toggleBtn     = document.getElementById('toggle-password');
+    const toggleIcon    = document.getElementById('toggle-icon');
+
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = passwordInput.type === 'password';
+      passwordInput.type = isHidden ? 'text' : 'password';
+      toggleIcon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+    });
+
+    // Form submit
+    const form     = document.getElementById('login-form');
+    const errorEl  = document.getElementById('login-error');
+    const errorTxt = document.getElementById('login-error-text');
+    const btnText  = document.getElementById('login-btn-text');
+    const btnLoad  = document.getElementById('login-btn-loading');
+    const authBox  = document.querySelector('.auth-box');
+
+    function showError(msg) {
+      errorTxt.textContent = msg;
+      errorEl.classList.add('is-visible');
+      // Shake animation
+      authBox.style.animation = 'shake 0.5s ease-in-out';
+      authBox.addEventListener('animationend', () => {
+        authBox.style.animation = '';
+      }, { once: true });
+    }
+
+    function clearError() {
+      errorEl.classList.remove('is-visible');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      if (!username || !password) {
+        showError('Please enter both username and password.');
+        return;
+      }
+
+      // Show loading state
+      btnText.style.display = 'none';
+      btnLoad.style.display = 'inline-flex';
+      document.getElementById('login-submit').disabled = true;
+
+      try {
+        const result = await auth.login(username, password);
+
+        if (result.success) {
+          window.location.href = 'dashboard.html';
+        } else {
+          btnText.style.display = '';
+          btnLoad.style.display = 'none';
+          document.getElementById('login-submit').disabled = false;
+          showError(result.message);
         }
-        
-        const authManager = new AuthManager();
-        
-        if (authManager.isAuthenticated()) {
-            window.location.href = 'dashboard.html';
-        }
-        
-        document.getElementById('login-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorMessage = document.getElementById('error-message');
-            
-            const result = authManager.login(username, password);
-            
-            if (result.success) {
-                window.location.href = 'dashboard.html';
-            } else {
-                errorMessage.textContent = result.message;
-                errorMessage.style.display = 'block';
-                
-                document.querySelector('.login-box').style.animation = 'shake 0.5s';
-                setTimeout(() => {
-                    document.querySelector('.login-box').style.animation = '';
-                }, 500);
-            }
-        });
-        
-        // Background canvas
-        const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
-        const particles = [];
-        for (let i = 0; i < 60; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: (Math.random() - 0.5) * 0.5,
-                radius: Math.random() * 2 + 1
-            });
-        }
-        
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            particles.forEach(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                
-                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-                
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(34, 211, 238, 0.3)';
-                ctx.fill();
-            });
-            
-            particles.forEach((p1, i) => {
-                particles.slice(i + 1).forEach(p2 => {
-                    const dx = p1.x - p2.x;
-                    const dy = p1.y - p2.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance < 120) {
-                        ctx.beginPath();
-                        ctx.strokeStyle = `rgba(34, 211, 238, ${0.15 * (1 - distance / 120)})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.moveTo(p1.x, p1.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.stroke();
-                    }
-                });
-            });
-            
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-        
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-    </script>
+      } catch (err) {
+        btnText.style.display = '';
+        btnLoad.style.display = 'none';
+        document.getElementById('login-submit').disabled = false;
+        showError('Login failed. Please try again.');
+      }
+    });
+  </script>
+
 </body>
 </html>

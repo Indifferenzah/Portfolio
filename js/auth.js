@@ -1,116 +1,223 @@
+/**
+ * auth.js — Authentication module.
+ * Uses Web Crypto API (SHA-256 + salt) via crypto.js.
+ * Session stored in sessionStorage (expires on tab close or after 24h).
+ * Credentials stored as { username, hash, salt } in localStorage.
+ */
+
+import { STORAGE_KEYS, SESSION_DURATION_HOURS } from './config.js';
+import { hashPassword, generateSalt, generateToken } from './crypto.js';
+
+// ── Auth Manager ─────────────────────────────────────────
+
 class AuthManager {
-    constructor() {
-        this.STORAGE_KEY = 'portfolio_auth';
-        this.CREDENTIALS_KEY = 'portfolio_credentials';
-        this.initializeCredentials();
+  constructor() {
+    this._configKey  = STORAGE_KEYS.authConfig;
+    this._sessionKey = STORAGE_KEYS.session;   // sessionStorage
+  }
+
+  // ── Configuration ──────────────────────────────────────
+
+  /**
+   * Check whether credentials have been configured.
+   * @returns {boolean}
+   */
+  hasCredentials() {
+    return !!localStorage.getItem(this._configKey);
+  }
+
+  /**
+   * Get stored auth config (username, hash, salt).
+   * @returns {{ username: string, hash: string, salt: string } | null}
+   */
+  getConfig() {
+    try {
+      const raw = localStorage.getItem(this._configKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Store new credentials. Called by setup.html.
+   * @param {string} username
+   * @param {string} hash      - SHA-256(salt + ':' + password)
+   * @param {string} salt
+   */
+  saveCredentials(username, hash, salt) {
+    localStorage.setItem(this._configKey, JSON.stringify({ username, hash, salt }));
+  }
+
+  // ── Login ──────────────────────────────────────────────
+
+  /**
+   * Attempt login. Async because of crypto operations.
+   * @param {string} username
+   * @param {string} password  - plaintext (hashed here)
+   * @returns {Promise<{ success: boolean, message: string }>}
+   */
+  async login(username, password) {
+    const config = this.getConfig();
+    if (!config) {
+      return { success: false, message: 'No credentials configured. Please run setup.' };
     }
 
-    initializeCredentials() {
-        if (!localStorage.getItem(this.CREDENTIALS_KEY)) {
-            const defaultCredentials = {
-                username: 'indifferenzah',
-                password: this.hashPassword('112@Outofhead!') // Password di default
-            };
-            localStorage.setItem(this.CREDENTIALS_KEY, JSON.stringify(defaultCredentials));
-        }
+    const hash = await hashPassword(password, config.salt);
+
+    if (username !== config.username || hash !== config.hash) {
+      return { success: false, message: 'Invalid username or password.' };
     }
 
-    hashPassword(password) {
-        let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            const char = password.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return hash.toString(36);
+    // Create session
+    const session = {
+      username,
+      token:     generateToken(),
+      loginTime: Date.now(),
+    };
+    sessionStorage.setItem(this._sessionKey, JSON.stringify(session));
+
+    return { success: true, message: 'Login successful!' };
+  }
+
+  // ── Session ────────────────────────────────────────────
+
+  /**
+   * Check whether the current session is valid.
+   * @returns {boolean}
+   */
+  isAuthenticated() {
+    try {
+      const raw = sessionStorage.getItem(this._sessionKey);
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      const elapsed = (Date.now() - session.loginTime) / (1000 * 60 * 60);
+      return elapsed < SESSION_DURATION_HOURS;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get the current logged-in username.
+   * @returns {string | null}
+   */
+  getCurrentUser() {
+    try {
+      const raw = sessionStorage.getItem(this._sessionKey);
+      if (!raw) return null;
+      return JSON.parse(raw).username ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Log out and redirect.
+   * @param {string} redirectTo
+   */
+  logout(redirectTo = '../index.html') {
+    sessionStorage.removeItem(this._sessionKey);
+    window.location.href = redirectTo;
+  }
+
+  // ── Change Credentials ─────────────────────────────────
+
+  /**
+   * Change username. Requires current password for confirmation.
+   * @param {string} newUsername
+   * @param {string} currentPassword
+   * @returns {Promise<{ success: boolean, message: string }>}
+   */
+  async changeUsername(newUsername, currentPassword) {
+    const config = this.getConfig();
+    if (!config) return { success: false, message: 'No credentials configured.' };
+
+    const hash = await hashPassword(currentPassword, config.salt);
+    if (hash !== config.hash) {
+      return { success: false, message: 'Current password is incorrect.' };
     }
 
-    login(username, password) {
-        const credentials = JSON.parse(localStorage.getItem(this.CREDENTIALS_KEY));
-        const hashedPassword = this.hashPassword(password);
+    this.saveCredentials(newUsername, config.hash, config.salt);
 
-        if (username === credentials.username && hashedPassword === credentials.password) {
-            const session = {
-                username: username,
-                loginTime: new Date().toISOString(),
-                token: this.generateToken()
-            };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-            return { success: true, message: 'Login effettuato con successo!' };
-        }
+    // Update session username
+    try {
+      const raw = sessionStorage.getItem(this._sessionKey);
+      if (raw) {
+        const session = JSON.parse(raw);
+        session.username = newUsername;
+        sessionStorage.setItem(this._sessionKey, JSON.stringify(session));
+      }
+    } catch { /* ignore */ }
 
-        return { success: false, message: 'Credenziali non valide!' };
+    return { success: true, message: 'Username changed successfully!' };
+  }
+
+  /**
+   * Change password. Requires current password for confirmation.
+   * @param {string} currentPassword
+   * @param {string} newPassword
+   * @returns {Promise<{ success: boolean, message: string }>}
+   */
+  async changePassword(currentPassword, newPassword) {
+    const config = this.getConfig();
+    if (!config) return { success: false, message: 'No credentials configured.' };
+
+    const currentHash = await hashPassword(currentPassword, config.salt);
+    if (currentHash !== config.hash) {
+      return { success: false, message: 'Current password is incorrect.' };
     }
 
-    logout() {
-        localStorage.removeItem(this.STORAGE_KEY);
-        window.location.href = '../index.html';
+    // Generate new salt and hash for new password
+    const newSalt = generateSalt();
+    const newHash = await hashPassword(newPassword, newSalt);
+    this.saveCredentials(config.username, newHash, newSalt);
+
+    return { success: true, message: 'Password changed successfully!' };
+  }
+
+  // ── Guards ─────────────────────────────────────────────
+
+  /**
+   * Guard for dashboard: redirect to login or setup if not authenticated.
+   */
+  requireAuth() {
+    if (!this.hasCredentials()) {
+      window.location.href = 'setup.html';
+      return false;
     }
-
-    isAuthenticated() {
-        const session = localStorage.getItem(this.STORAGE_KEY);
-        if (!session) return false;
-
-        try {
-            const sessionData = JSON.parse(session);
-            const loginTime = new Date(sessionData.loginTime);
-            const now = new Date();
-            const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
-
-            return hoursDiff < 24;
-        } catch (e) {
-            return false;
-        }
+    if (!this.isAuthenticated()) {
+      window.location.href = 'login.html';
+      return false;
     }
+    return true;
+  }
 
-    changePassword(oldPassword, newPassword) {
-        const credentials = JSON.parse(localStorage.getItem(this.CREDENTIALS_KEY));
-        const hashedOldPassword = this.hashPassword(oldPassword);
-
-        if (hashedOldPassword === credentials.password) {
-            credentials.password = this.hashPassword(newPassword);
-            localStorage.setItem(this.CREDENTIALS_KEY, JSON.stringify(credentials));
-            return { success: true, message: 'Password modificata con successo!' };
-        }
-
-        return { success: false, message: 'Password attuale non corretta!' };
+  /**
+   * Guard for login page: redirect if already authenticated or no creds exist.
+   */
+  guardLogin() {
+    if (!this.hasCredentials()) {
+      window.location.href = 'setup.html';
+      return false;
     }
-
-    changeUsername(newUsername, password) {
-        const credentials = JSON.parse(localStorage.getItem(this.CREDENTIALS_KEY));
-        const hashedPassword = this.hashPassword(password);
-
-        if (hashedPassword === credentials.password) {
-            credentials.username = newUsername;
-            localStorage.setItem(this.CREDENTIALS_KEY, JSON.stringify(credentials));
-            
-            const session = JSON.parse(localStorage.getItem(this.STORAGE_KEY));
-            session.username = newUsername;
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session));
-            
-            return { success: true, message: 'Username modificato con successo!' };
-        }
-
-        return { success: false, message: 'Password non corretta!' };
+    if (this.isAuthenticated()) {
+      window.location.href = 'dashboard.html';
+      return false;
     }
+    return true;
+  }
 
-    generateToken() {
-        return Math.random().toString(36).substr(2) + Date.now().toString(36);
+  /**
+   * Guard for setup page: redirect if credentials already exist.
+   */
+  guardSetup() {
+    if (this.hasCredentials()) {
+      window.location.href = 'login.html';
+      return false;
     }
-
-    getCurrentUser() {
-        const session = localStorage.getItem(this.STORAGE_KEY);
-        if (!session) return null;
-        
-        try {
-            const sessionData = JSON.parse(session);
-            return sessionData.username;
-        } catch (e) {
-            return null;
-        }
-    }
+    return true;
+  }
 }
 
-if (typeof window !== 'undefined') {
-    window.AuthManager = AuthManager;
-}
+export const auth = new AuthManager();
