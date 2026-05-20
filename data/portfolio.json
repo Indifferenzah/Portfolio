@@ -1,17 +1,17 @@
 {
   "personalInfo": {
     "name": "Indifferenzah",
-    "title": "Web Developer & Python Developer",
-    "description": "Passionate developer crafting elegant solutions with HTML, CSS, JavaScript, and Python. Over 2 years of hands-on experience building web applications and automation tools.",
-    "email": "contact@indifferenzah.dev",
+    "title": "Web & Software",
+    "description": "Full Stack Developer crafting clean, functional solutions across the entire stack — from responsive interfaces with HTML, CSS & JavaScript, to back-end systems and automation tools with PHP and Python. 3+ years of hands-on experience turning ideas into working software.",
+    "email": "marcomillq@gmail.com",
     "discord": "indifferenzah",
     "github": "Indifferenzah",
     "kofi": "indifferenzah",
-    "yearsExperience": "2+",
-    "projectsCompleted": "10+"
+    "yearsExperience": "3+",
+    "projectsCompleted": "15+"
   },
   "about": {
-    "text1": "I'm a passionate web and Python developer with over 2 years of experience building interactive, visually appealing websites and automation tools. My journey started with a fascination for how the web works, which led me to dive deep into front-end technologies and back-end scripting with Python.",
+    "text1": "I'm a Full Stack Developer with 3+ years of experience and a genuine passion for turning ideas into working software. My journey started with a curiosity for how the web works — and it quickly grew into a deep dive across the entire stack: from pixel-perfect front-ends with HTML, CSS, and JavaScript, to back-end development with PHP and Python, to low-level programming in C, C++, C#, and Java. Whether it's a sleek web app or an automation tool, I love building things that are both functional and well-crafted.",
     "text2": "I believe in clean code, intuitive design, and continuous learning. Whether it's crafting pixel-perfect interfaces or building efficient backend scripts, I approach every project with attention to detail and a drive to deliver excellent results."
   },
   "experiences": [
@@ -35,10 +35,31 @@
     }
   ],
   "skills": [
-    { "id": 1, "name": "HTML",       "level": 100 },
-    { "id": 2, "name": "CSS",        "level": 100 },
-    { "id": 3, "name": "JavaScript", "level": 75  },
-    { "id": 4, "name": "Python",     "level": 100 }
+    {
+      "id": 1,
+      "name": "HTML, CSS",
+      "level": 100
+    },
+    {
+      "id": 3,
+      "name": "JavaScript",
+      "level": 100
+    },
+    {
+      "id": 4,
+      "name": "Python",
+      "level": 100
+    },
+    {
+      "name": "Java",
+      "level": 100,
+      "id": 5
+    },
+    {
+      "name": "React",
+      "level": 100,
+      "id": 9
+    }
   ],
   "projects": [
     {
@@ -47,7 +68,11 @@
       "description": "A feature-rich Discord bot built with JavaScript and Discord.js. Handles server management, automated tasks, and enhanced user interaction.",
       "link": "https://github.com/Indifferenzah/Valiancejs",
       "image": "",
-      "technologies": ["JavaScript", "Discord.js", "Node.js"]
+      "technologies": [
+        "JavaScript",
+        "Discord.js",
+        "Node.js"
+      ]
     },
     {
       "id": 2,
@@ -55,7 +80,10 @@
       "description": "AI-powered content detection tool built with Python machine learning libraries.",
       "link": "https://github.com/Indifferenzah/AiDetector",
       "image": "",
-      "technologies": ["Python", "Machine Learning"]
+      "technologies": [
+        "Python",
+        "Machine Learning"
+      ]
     },
     {
       "id": 3,
@@ -63,15 +91,66 @@
       "description": "A modern website with a forum for the Valiance community. Clean UI with responsive design.",
       "link": "https://github.com/Indifferenzah/ValianceSite",
       "image": "",
-      "technologies": ["HTML", "CSS", "JavaScript"]
+      "technologies": [
+        "JavaScript",
+        "React",
+        "CSS"
+      ]
     },
     {
       "id": 4,
       "title": "Portfolio Website",
       "description": "This portfolio — built from scratch with a glassmorphism design, admin dashboard, and secure authentication.",
-      "link": "",
+      "link": "https://github.com/Indifferenzah/Portfolio",
       "image": "",
-      "technologies": ["HTML", "CSS", "JavaScript", "Web Crypto API"]
+      "technologies": [
+        "Web Crypto API",
+        "React",
+        "Vite",
+        "CSS",
+        "JavaScript"
+      ]
+    },
+    {
+      "title": "RivalCore",
+      "description": "UHC-style last man standing plugin for minecraft Paper 1.21.1",
+      "link": "https://github.com/Indifferenzah/RivalCore",
+      "technologies": [
+        "Java",
+        "Paper",
+        "AdventureAPI",
+        "Maven",
+        "Bukkit"
+      ],
+      "id": 5
+    },
+    {
+      "title": "HuntCore",
+      "description": "HuntCore is a fully-featured Manhunt game plugin for Paper 1.21.1. Runners try to mine a hidden block of crying obsidian — Hunters must eliminate them all before they succeed.",
+      "link": "https://github.com/Indifferenzah/HuntCore",
+      "technologies": [
+        "Java",
+        "Gradle",
+        "Lamp",
+        "Paper",
+        "Bukkit",
+        "AdventureAPI"
+      ],
+      "id": 6
+    },
+    {
+      "title": "HubCore",
+      "description": "HubCore is a fully-featured hub & lobby management plugin for Paper 1.21.1. It provides a complete PvP system, interactive lobby utilities, animated tab/scoreboard, configurable GUI menus, a global action system, and a dynamic command/alias engine — all reloadable at runtime without restarting the server.",
+      "link": "https://github.com/Indifferenzah/hubcore",
+      "technologies": [
+        "Java",
+        "AdventureAPI",
+        "Lamp",
+        "Gradle",
+        "Paper",
+        "Bukkit"
+      ],
+      "id": 7
     }
   ],
   "education": [

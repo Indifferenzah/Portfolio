@@ -1,39 +1,28 @@
-import { useEffect, useRef } from 'react';
-
-function EducationCard({ edu, delay }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('is-visible'); obs.disconnect(); } },
-      { rootMargin: '0px 0px -60px 0px' }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <div className="education-card reveal" ref={ref} style={{ transitionDelay: `${delay}ms` }}>
-      <div className="education-card__icon">
-        <i className="fas fa-graduation-cap" aria-hidden="true" />
-      </div>
-      <h3 className="education-card__title">{edu.title}</h3>
-      <p className="education-card__period">{edu.period}</p>
-      <p className="education-card__description">{edu.description}</p>
-    </div>
-  );
-}
-
 export default function Education({ education = [] }) {
   return (
     <section id="education" className="section">
       <div className="container">
-        <h2 className="section-title">Education</h2>
-        <div className="education__grid">
-          {education.map((edu, i) => (
-            <EducationCard key={edu.id} edu={edu} delay={i * 100} />
-          ))}
+        <div className="section-inner">
+          <div className="section-bg-number" aria-hidden="true">05</div>
+
+          <header className="section-header">
+            <div className="section-label">Academic Background</div>
+            <h2 className="section-title">EDUCATION</h2>
+          </header>
+
+          <div className="section-shell section-shell--timeline">
+            <div className="timeline">
+              {education.map(edu => (
+                <div key={edu.id} className="timeline-item">
+                  <div className="timeline-item__period">{edu.period}</div>
+                  <h3 className="timeline-item__title">{edu.title}</h3>
+                  {edu.description && (
+                    <p className="timeline-item__desc">{edu.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

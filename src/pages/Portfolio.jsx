@@ -27,11 +27,11 @@ export default function Portfolio() {
   if (!appReady) {
     return (
       <>
+        <ParticlesCanvas />
         <LoadingScreen
-          name={data?.personalInfo?.name || 'Indifferenzah'}
+          name={data?.personalInfo?.name || 'Portfolio'}
           onDone={() => setAppReady(true)}
         />
-        <ParticlesCanvas />
       </>
     );
   }
@@ -43,7 +43,7 @@ export default function Portfolio() {
       <ParticlesCanvas />
       <Navbar name={pi.name} />
 
-      <main id="main-content">
+      <main id="main-content" className="portfolio-main">
         <Hero       data={pi} />
         <About      data={data?.about} personalInfo={pi} />
         <Experience experiences={data?.experiences} />

@@ -5,11 +5,11 @@ import { hashPassword, generateSalt, measurePasswordStrength } from '../../utils
 import { useToast } from '../../context/AppContext';
 import ParticlesCanvas from '../../components/ParticlesCanvas';
 
-const STRENGTH_LABELS = ['', 'Weak', 'Medium', 'Strong'];
+const STRENGTH_LABELS  = ['', 'Weak', 'Medium', 'Strong'];
 const STRENGTH_CLASSES = ['', 'is-weak', 'is-medium', 'is-strong'];
 
 export default function Setup() {
-  const navigate = useNavigate();
+  const navigate     = useNavigate();
   const { addToast } = useToast();
   const [form, setForm]   = useState({ username: '', password: '', confirm: '' });
   const [error, setError] = useState('');
@@ -31,8 +31,8 @@ export default function Setup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (form.password !== form.confirm) { setError('Passwords do not match'); return; }
-    if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (form.password !== form.confirm)  { setError('Passwords do not match'); return; }
+    if (form.password.length < 6)        { setError('Password must be at least 6 characters'); return; }
     setLoading(true);
     try {
       const salt = generateSalt();
@@ -50,6 +50,7 @@ export default function Setup() {
   return (
     <div className="auth-page">
       <ParticlesCanvas />
+
       <div className="auth-box">
         <div className="auth-box__header">
           <div className="auth-box__icon">
@@ -60,11 +61,12 @@ export default function Setup() {
         </div>
 
         <div className="setup-info">
-          <p><i className="fas fa-circle-info" style={{ marginRight: 'var(--space-2)' }} />This is a one-time setup. Your credentials will be used to manage the portfolio.</p>
+          <i className="fas fa-circle-info" style={{ marginRight: 'var(--s2)' }} />
+          One-time setup. Your credentials will be used to manage the portfolio.
         </div>
 
         {error && (
-          <div className="auth-error is-visible">
+          <div className="auth-error">
             <i className="fas fa-circle-xmark" />
             {error}
           </div>
@@ -135,8 +137,16 @@ export default function Setup() {
             </div>
           </div>
 
-          <button type="submit" className="btn btn--primary btn--block btn--lg" disabled={loading}>
-            {loading ? <><i className="fas fa-spinner fa-spin" /> Creating…</> : <><i className="fas fa-user-plus" /> Create Account</>}
+          <button
+            type="submit"
+            className="btn btn--primary btn--block btn--lg"
+            disabled={loading}
+            style={{ marginTop: 'var(--s2)' }}
+          >
+            {loading
+              ? <><i className="fas fa-spinner fa-spin" /> Creating…</>
+              : <><i className="fas fa-user-plus" /> Create Account</>
+            }
           </button>
         </form>
       </div>

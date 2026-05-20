@@ -1,77 +1,77 @@
 import { useState, useEffect } from 'react';
 
-const NAV_LINKS = [
-  { href: '#home',       label: 'Home' },
-  { href: '#about',      label: 'About' },
-  { href: '#experience', label: 'Experience' },
-  { href: '#skills',     label: 'Skills' },
-  { href: '#projects',   label: 'Projects' },
-  { href: '#education',  label: 'Education' },
-  { href: '#contact',    label: 'Contact' },
+const LINKS = [
+  { id: 'home',       label: 'Home' },
+  { id: 'about',      label: 'About' },
+  { id: 'experience', label: 'Exp' },
+  { id: 'skills',     label: 'Skills' },
+  { id: 'projects',   label: 'Projects' },
+  { id: 'education',  label: 'Edu' },
+  { id: 'contact',    label: 'Contact' },
 ];
 
-export default function Navbar({ name = 'Indifferenzah' }) {
-  const [scrolled, setScrolled]   = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [activeSection, setActive] = useState('home');
+export default function Navbar({ name = 'Portfolio' }) {
+  const [active,   setActive]   = useState('home');
+  const [scrolled, setScrolled] = useState(false);
+  const [open,     setOpen]     = useState(false);
 
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 20);
-      // Active section tracking
-      const sections = NAV_LINKS.map(l => l.href.slice(1));
-      for (const id of [...sections].reverse()) {
+    function onScroll() {
+      setScrolled(window.scrollY > 10);
+      const ids = [...LINKS].map(l => l.id).reverse();
+      for (const id of ids) {
         const el = document.getElementById(id);
         if (el && window.scrollY >= el.offsetTop - 100) {
           setActive(id);
           break;
         }
       }
-    };
+    }
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  function handleLink(e, href) {
-    e.preventDefault();
-    const target = document.querySelector(href);
-    if (target) target.scrollIntoView({ behavior: 'smooth' });
-    setMenuOpen(false);
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setOpen(false);
   }
 
+  const first = name?.[0] ?? '';
+  const rest  = name?.slice(1) ?? '';
+
   return (
-    <nav className={`navbar${scrolled ? ' is-scrolled' : ''}`} role="navigation" aria-label="Main navigation">
-      <div className="navbar__container">
-        <a href="#home" className="navbar__brand" onClick={e => handleLink(e, '#home')}>
-          <i className="fas fa-code" aria-hidden="true" />
-          <span>{name}</span>
+    <nav className={`navbar${scrolled ? ' navbar--scrolled' : ''}`} aria-label="Main navigation">
+      <div className="navbar__inner">
+        <a
+          href="#home"
+          className="navbar__logo"
+          onClick={e => { e.preventDefault(); scrollTo('home'); }}
+        >
+          {first}<span>{rest}</span>
         </a>
 
-        <button
-          className={`navbar__toggle${menuOpen ? ' is-open' : ''}`}
-          onClick={() => setMenuOpen(o => !o)}
-          aria-label="Toggle navigation"
-          aria-expanded={menuOpen}
-        >
-          <span className="navbar__toggle-bar" />
-          <span className="navbar__toggle-bar" />
-          <span className="navbar__toggle-bar" />
-        </button>
-
-        <ul className={`navbar__menu${menuOpen ? ' is-open' : ''}`} role="menubar">
-          {NAV_LINKS.map(({ href, label }) => (
-            <li key={href} role="none">
-              <a
-                href={href}
-                role="menuitem"
-                className={`navbar__link${activeSection === href.slice(1) ? ' is-active' : ''}`}
-                onClick={e => handleLink(e, href)}
-              >
-                {label}
-              </a>
-            </li>
+        <div className={`navbar__nav${open ? ' is-open' : ''}`}>
+          {LINKS.map(l => (
+            <button
+              key={l.id}
+              className={`navbar__link${active === l.id ? ' is-active' : ''}`}
+              onClick={() => scrollTo(l.id)}
+            >
+              {l.label}
+            </button>
           ))}
-        </ul>
+        </div>
+
+        <button
+          className="navbar__hamburger"
+          onClick={() => setOpen(o => !o)}
+          aria-label="Toggle menu"
+          aria-expanded={open}
+        >
+          <span style={{ transform: open ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+          <span style={{ opacity: open ? 0 : 1 }} />
+          <span style={{ transform: open ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+        </button>
       </div>
     </nav>
   );

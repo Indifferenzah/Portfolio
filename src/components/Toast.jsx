@@ -9,16 +9,17 @@ const ICONS = {
 
 export default function ToastContainer() {
   const { toasts, removeToast } = useToast();
-
   return (
     <div className="toast-container" aria-live="polite" aria-atomic="true">
       {toasts.map(t => (
-        <div key={t.id} className={`toast toast--${t.type}`} role="alert">
-          <i className={`fas ${ICONS[t.type] || ICONS.info} toast__icon`} aria-hidden="true" />
-          <span className="toast__message">{t.message}</span>
-          <button className="toast__close" onClick={() => removeToast(t.id)} aria-label="Dismiss">
-            <i className="fas fa-xmark" aria-hidden="true" />
-          </button>
+        <div
+          key={t.id}
+          className={`toast toast--${t.type}`}
+          onClick={() => removeToast(t.id)}
+          role="alert"
+        >
+          <i className={`fas ${ICONS[t.type] || ICONS.info} toast__icon--${t.type}`} aria-hidden="true" />
+          <span>{t.message}</span>
         </div>
       ))}
     </div>

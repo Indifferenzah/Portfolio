@@ -1,117 +1,148 @@
 import { useEffect, useRef } from 'react';
 
-const COLORS = ['#22d3ee', '#8b5cf6'];
-const COUNT  = 80;
-
-function createParticle(w, h) {
-  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-  return {
-    x: Math.random() * w,
-    y: Math.random() * h,
-    vx: (Math.random() - 0.5) * 0.8,
-    vy: (Math.random() - 0.5) * 0.8,
-    radius: Math.random() * 2 + 1,
-    color,
-    alpha: Math.random() * 0.5 + 0.2,
-  };
-}
-
+/**
+ * Full-viewport ambient layer: subtle grid + radial glow + gentle warp
+ * driven by pointer position. pointer-events: none so UI stays usable.
+ */
 export default function ParticlesCanvas() {
   const canvasRef = useRef(null);
+  const mouseRef = useRef({
+    tx: 0,
+    ty: 0,
+    lx: 0,
+    ly: 0,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx    = canvas.getContext('2d');
-    let particles = [];
-    let mouse     = { x: -9999, y: -9999 };
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const m = mouseRef.current;
+
     let animId;
+    let t = 0;
+    let reduceMotion = false;
+
+    const GRID = 44;
+    const DOT = 1.15;
+    const COLOR = '196, 255, 71';
+
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduceMotion = mq.matches;
+    const onMq = () => { reduceMotion = mq.matches; };
+    mq.addEventListener('change', onMq);
+
+    function placeCenter() {
+      const cx = window.innerWidth * 0.5;
+      const cy = window.innerHeight * 0.5;
+      m.tx = m.lx = cx;
+      m.ty = m.ly = cy;
+    }
 
     function resize() {
-      canvas.width  = window.innerWidth;
+      canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      placeCenter();
     }
 
-    function init() {
-      resize();
-      particles = Array.from({ length: COUNT }, () =>
-        createParticle(canvas.width, canvas.height)
-      );
+    function onMove(e) {
+      m.tx = e.clientX;
+      m.ty = e.clientY;
     }
+
+    function onTouch(e) {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      m.tx = touch.clientX;
+      m.ty = touch.clientY;
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', onMove, { passive: true });
+    window.addEventListener('touchstart', onTouch, { passive: true });
+    window.addEventListener('touchmove', onTouch, { passive: true });
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
 
-      particles.forEach(p => {
-        // Mouse repulsion
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
-          const force = (120 - dist) / 120;
-          p.vx += (dx / dist) * force * 0.5;
-          p.vy += (dy / dist) * force * 0.5;
-        }
+      const lerp = reduceMotion ? 1 : 0.1;
+      m.lx += (m.tx - m.lx) * lerp;
+      m.ly += (m.ty - m.ly) * lerp;
+      const mx = m.lx;
+      const my = m.ly;
 
-        // Damping
-        p.vx *= 0.99;
-        p.vy *= 0.99;
-        p.x  += p.vx;
-        p.y  += p.vy;
+      if (!reduceMotion) t += 0.0055;
 
-        // Wrap edges
-        if (p.x < 0)             p.x = canvas.width;
-        if (p.x > canvas.width)  p.x = 0;
-        if (p.y < 0)             p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
+      const glowR = Math.max(w, h) * 0.42;
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, glowR);
+      g.addColorStop(0, `rgba(${COLOR}, 0.075)`);
+      g.addColorStop(0.28, `rgba(${COLOR}, 0.028)`);
+      g.addColorStop(0.55, `rgba(${COLOR}, 0.008)`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
 
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.fill();
-      });
+      const cols = Math.ceil(w / GRID) + 1;
+      const rows = Math.ceil(h / GRID) + 1;
+      const fallK = 1 / (220 * 220);
 
-      // Connection lines
-      ctx.globalAlpha = 1;
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const a = particles[i];
-          const b = particles[j];
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = a.color;
-            ctx.globalAlpha = (1 - dist / 120) * 0.15;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
+      for (let xi = 0; xi < cols; xi++) {
+        for (let yi = 0; yi < rows; yi++) {
+          const px = xi * GRID;
+          const py = yi * GRID;
+          const dx = px - mx;
+          const dy = py - my;
+          const distSq = dx * dx + dy * dy;
+          const near = Math.exp(-distSq * fallK);
+
+          const wave = reduceMotion
+            ? 0.45
+            : Math.sin(xi * 0.32 + t) * Math.cos(yi * 0.32 + t) * 0.5 + 0.5;
+          const baseA = wave * 0.09;
+          const alpha = Math.min(0.52, baseA + near * 0.26);
+
+          const len = Math.sqrt(distSq + 64);
+          const push = near * 18;
+          const ox = px + (dx / len) * push;
+          const oy = py + (dy / len) * push;
+          const r = DOT + near * 1.1;
+
+          ctx.beginPath();
+          ctx.arc(ox, oy, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${COLOR}, ${alpha})`;
+          ctx.fill();
         }
       }
-      ctx.globalAlpha = 1;
+
       animId = requestAnimationFrame(draw);
     }
 
-    function onMouseMove(e) {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    }
-
-    init();
     draw();
-    window.addEventListener('resize', init);
-    window.addEventListener('mousemove', onMouseMove);
 
     return () => {
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchstart', onTouch);
+      window.removeEventListener('touchmove', onTouch);
+      mq.removeEventListener('change', onMq);
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', init);
-      window.removeEventListener('mousemove', onMouseMove);
     };
   }, []);
 
-  return <canvas ref={canvasRef} id="bg-canvas" aria-hidden="true" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 0,
+        opacity: 0.82,
+      }}
+    />
+  );
 }

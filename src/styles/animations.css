@@ -1,270 +1,38 @@
-/* ============================================================
-   ANIMATIONS — animations.css
-   All keyframes and animation utility classes
-   ============================================================ */
-
-/* ── Keyframes ──────────────────────────────────────────── */
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes fadeInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-
-@keyframes slideInUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-
-@keyframes slideOutDown {
-  from { transform: translateY(0); opacity: 1; }
-  to   { transform: translateY(20px); opacity: 0; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33%       { transform: translateY(-12px) rotate(1deg); }
-  66%       { transform: translateY(-6px) rotate(-1deg); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
-}
-
-@keyframes pulseSlow {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%       { opacity: 1; transform: scale(1.05); }
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(34, 211, 238, 0.2); }
-  50%       { box-shadow: 0 0 35px rgba(34, 211, 238, 0.5), 0 0 60px rgba(34, 211, 238, 0.2); }
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@keyframes shake {
-  0%, 100%  { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
-  20%, 40%, 60%, 80%      { transform: translateX(6px); }
-}
-
-@keyframes bounceIn {
-  0%   { opacity: 0; transform: scale(0.3); }
-  50%  { opacity: 1; transform: scale(1.05); }
-  70%  { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-
-@keyframes typewriter {
-  from { width: 0; }
-  to   { width: 100%; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-@keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes progressFill {
-  from { width: 0%; }
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(5px); }
 }
 
 @keyframes dotPulse {
   0%, 80%, 100% { transform: scale(0); opacity: 0; }
   40%            { transform: scale(1); opacity: 1; }
 }
-
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25%       { transform: translate(30px, -30px) scale(1.05); }
-  50%       { transform: translate(-20px, -50px) scale(0.95); }
-  75%       { transform: translate(-30px, 20px) scale(1.02); }
-}
-
-@keyframes borderGlow {
-  0%, 100% { border-color: rgba(34, 211, 238, 0.2); }
-  50%       { border-color: rgba(34, 211, 238, 0.6); }
-}
-
-/* ── Reveal animations (triggered by IntersectionObserver) ── */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity var(--duration-slow) var(--ease-out),
-              transform var(--duration-slow) var(--ease-out);
-}
-
-.reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.reveal--left {
-  opacity: 0;
-  transform: translateX(-24px);
-}
-
-.reveal--left.is-visible {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.reveal--right {
-  opacity: 0;
-  transform: translateX(24px);
-}
-
-.reveal--right.is-visible {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.reveal--scale {
-  opacity: 0;
-  transform: scale(0.9);
-}
-
-.reveal--scale.is-visible {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Stagger delays for children */
-.reveal-stagger > *:nth-child(1) { transition-delay: 0ms; }
-.reveal-stagger > *:nth-child(2) { transition-delay: 80ms; }
-.reveal-stagger > *:nth-child(3) { transition-delay: 160ms; }
-.reveal-stagger > *:nth-child(4) { transition-delay: 240ms; }
-.reveal-stagger > *:nth-child(5) { transition-delay: 320ms; }
-.reveal-stagger > *:nth-child(6) { transition-delay: 400ms; }
-.reveal-stagger > *:nth-child(7) { transition-delay: 480ms; }
-.reveal-stagger > *:nth-child(8) { transition-delay: 560ms; }
-
-/* ── Spinner ─────────────────────────────────────────────── */
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(34, 211, 238, 0.2);
-  border-top-color: var(--color-cyan);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
-}
-
-.spinner--lg {
-  width: 48px;
-  height: 48px;
-  border-width: 3px;
-}
-
-/* ── Skeleton loader ────────────────────────────────────── */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-secondary) 25%,
-    var(--color-bg-tertiary) 50%,
-    var(--color-bg-secondary) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-md);
-}
-
-/* ── Utility animation classes ──────────────────────────── */
-.animate-float      { animation: float 6s ease-in-out infinite; }
-.animate-pulse      { animation: pulse 2s ease-in-out infinite; }
-.animate-spin       { animation: spin 1s linear infinite; }
-.animate-fadeIn     { animation: fadeIn var(--duration-slow) var(--ease-out) both; }
-.animate-fadeInUp   { animation: fadeInUp var(--duration-slow) var(--ease-out) both; }
-.animate-scaleIn    { animation: scaleIn var(--duration-slow) var(--ease-spring) both; }
-.animate-bounceIn   { animation: bounceIn var(--duration-slower) var(--ease-out) both; }
-.animate-glow       { animation: glowPulse 2.5s ease-in-out infinite; }
-.animate-gradient   { animation: gradientShift 4s ease infinite; background-size: 200% 200%; }
-
-/* Delay utilities */
-.delay-100  { animation-delay: 100ms; }
-.delay-200  { animation-delay: 200ms; }
-.delay-300  { animation-delay: 300ms; }
-.delay-400  { animation-delay: 400ms; }
-.delay-500  { animation-delay: 500ms; }
-.delay-700  { animation-delay: 700ms; }
-.delay-1000 { animation-delay: 1000ms; }

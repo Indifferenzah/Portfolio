@@ -6,9 +6,17 @@ import { useToast } from '../../context/AppContext';
 import Modal from '../../components/Modal';
 
 // ── Helpers ──────────────────────────────────────────────────
-
 function nextId(arr) {
   return arr.length ? Math.max(...arr.map(i => i.id)) + 1 : 1;
+}
+
+/** Move item from `from` to `to` index (inclusive bounds). */
+function moveItemAt(arr, from, to) {
+  if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return arr;
+  const next = [...arr];
+  const [removed] = next.splice(from, 1);
+  next.splice(to, 0, removed);
+  return next;
 }
 
 function downloadJson(obj, filename) {
@@ -19,8 +27,7 @@ function downloadJson(obj, filename) {
   URL.revokeObjectURL(url);
 }
 
-// ── Sidebar ──────────────────────────────────────────────────
-
+// ── Sidebar sections ─────────────────────────────────────────
 const SECTIONS = [
   { id: 'dashboard',   label: 'Dashboard',    icon: 'fa-gauge' },
   { id: 'personal',    label: 'Personal Info', icon: 'fa-id-card' },
@@ -32,19 +39,17 @@ const SECTIONS = [
   { id: 'settings',    label: 'Settings',      icon: 'fa-gear' },
 ];
 
-// ── Main Dashboard component ─────────────────────────────────
-
+// ── Main Dashboard ───────────────────────────────────────────
 export default function Dashboard() {
-  const navigate  = useNavigate();
+  const navigate     = useNavigate();
   const { addToast } = useToast();
-  const username  = getUsername();
+  const username     = getUsername();
 
   const [data,    setData]    = useState(null);
   const [section, setSection] = useState('dashboard');
   const [sidebar, setSidebar] = useState(false);
-  const [modal,   setModal]   = useState(null); // { type, item }
+  const [modal,   setModal]   = useState(null);
 
-  // Auth guard
   useEffect(() => {
     if (!isAuthenticated()) { navigate('/admin/login'); return; }
     portfolioApi.get().then(setData).catch(() => addToast('Failed to load data', 'error'));
@@ -76,15 +81,10 @@ export default function Dashboard() {
 
   return (
     <div className="admin-layout">
-      {/* Sidebar overlay (mobile) */}
       {sidebar && (
-        <div
-          className="sidebar-overlay is-visible"
-          onClick={() => setSidebar(false)}
-        />
+        <div className="sidebar-overlay is-visible" onClick={() => setSidebar(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`sidebar${sidebar ? ' is-open' : ''}`}>
         <div className="sidebar__header">
           <div className="sidebar__logo"><i className="fas fa-code" /></div>
@@ -120,30 +120,68 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="admin-main">
-        {/* Topbar */}
         <header className="topbar">
-          <button className="topbar__toggle" onClick={() => setSidebar(o => !o)} aria-label="Toggle sidebar">
+          <button
+            className="topbar__toggle"
+            onClick={() => setSidebar(o => !o)}
+            aria-label="Toggle sidebar"
+          >
             <i className="fas fa-bars" />
           </button>
-          <h1 className="topbar__title">{SECTIONS.find(s => s.id === section)?.label || 'Dashboard'}</h1>
+          <h1 className="topbar__title">
+            {SECTIONS.find(s => s.id === section)?.label || 'Dashboard'}
+          </h1>
           <div className="topbar__user">
             <div className="topbar__avatar">{username?.[0]?.toUpperCase() || 'A'}</div>
             <span className="topbar__username">{username}</span>
           </div>
         </header>
 
-        {/* Content */}
         <div className="admin-content">
           {section === 'dashboard'   && <SectionDashboard data={data} setSection={setSection} />}
           {section === 'personal'    && <SectionPersonal  data={data} onSave={saveData} />}
           {section === 'about'       && <SectionAbout     data={data} onSave={saveData} />}
-          {section === 'experiences' && <SectionList title="Experiences" icon="fa-briefcase" items={data.experiences} onSave={items => saveData({ ...data, experiences: items })} modal={modal} setModal={setModal} renderForm={ExperienceForm} />}
-          {section === 'skills'      && <SectionList title="Skills" icon="fa-code" items={data.skills} onSave={items => saveData({ ...data, skills: items })} modal={modal} setModal={setModal} renderForm={SkillForm} renderItem={SkillItemRow} />}
-          {section === 'projects'    && <SectionList title="Projects" icon="fa-folder-open" items={data.projects} onSave={items => saveData({ ...data, projects: items })} modal={modal} setModal={setModal} renderForm={ProjectForm} />}
-          {section === 'education'   && <SectionList title="Education" icon="fa-graduation-cap" items={data.education} onSave={items => saveData({ ...data, education: items })} modal={modal} setModal={setModal} renderForm={EducationForm} />}
-          {section === 'settings'    && <SectionSettings data={data} onSave={saveData} addToast={addToast} />}
+          {section === 'experiences' && (
+            <SectionList
+              title="Experiences" icon="fa-briefcase"
+              items={data.experiences}
+              onSave={items => saveData({ ...data, experiences: items })}
+              modal={modal} setModal={setModal}
+              renderForm={ExperienceForm}
+            />
+          )}
+          {section === 'skills' && (
+            <SectionList
+              title="Skills" icon="fa-code"
+              items={data.skills}
+              onSave={items => saveData({ ...data, skills: items })}
+              modal={modal} setModal={setModal}
+              renderForm={SkillForm}
+              renderItem={SkillItemRow}
+            />
+          )}
+          {section === 'projects' && (
+            <SectionList
+              title="Projects" icon="fa-folder-open"
+              items={data.projects}
+              onSave={items => saveData({ ...data, projects: items })}
+              modal={modal} setModal={setModal}
+              renderForm={ProjectForm}
+            />
+          )}
+          {section === 'education' && (
+            <SectionList
+              title="Education" icon="fa-graduation-cap"
+              items={data.education}
+              onSave={items => saveData({ ...data, education: items })}
+              modal={modal} setModal={setModal}
+              renderForm={EducationForm}
+            />
+          )}
+          {section === 'settings' && (
+            <SectionSettings data={data} onSave={saveData} addToast={addToast} />
+          )}
         </div>
       </div>
     </div>
@@ -151,19 +189,22 @@ export default function Dashboard() {
 }
 
 // ── Dashboard overview ───────────────────────────────────────
-
 function SectionDashboard({ data, setSection }) {
   const stats = [
-    { label: 'Experiences', value: data.experiences?.length || 0, icon: 'fa-briefcase', section: 'experiences' },
-    { label: 'Skills',      value: data.skills?.length || 0,      icon: 'fa-code',      section: 'skills' },
-    { label: 'Projects',    value: data.projects?.length || 0,    icon: 'fa-folder-open', section: 'projects' },
-    { label: 'Education',   value: data.education?.length || 0,   icon: 'fa-graduation-cap', section: 'education' },
+    { label: 'Experiences', value: data.experiences?.length || 0, icon: 'fa-briefcase',     section: 'experiences' },
+    { label: 'Skills',      value: data.skills?.length      || 0, icon: 'fa-code',          section: 'skills' },
+    { label: 'Projects',    value: data.projects?.length    || 0, icon: 'fa-folder-open',   section: 'projects' },
+    { label: 'Education',   value: data.education?.length   || 0, icon: 'fa-graduation-cap', section: 'education' },
   ];
   return (
     <>
       <div className="dashboard__stats">
         {stats.map(s => (
-          <div key={s.label} className="dashboard-stat" onClick={() => setSection(s.section)} style={{ cursor: 'pointer' }}>
+          <div
+            key={s.label}
+            className="dashboard-stat"
+            onClick={() => setSection(s.section)}
+          >
             <div className="dashboard-stat__icon"><i className={`fas ${s.icon}`} /></div>
             <div>
               <div className="dashboard-stat__value">{s.value}</div>
@@ -176,7 +217,11 @@ function SectionDashboard({ data, setSection }) {
         <h2>Welcome back!</h2>
         <p>Use the sidebar to manage your portfolio content.</p>
         <ul>
-          {['Edit personal info & about text', 'Add or remove experiences', 'Update your skills & levels', 'Manage projects & education'].map(t => (
+          {[
+            'Edit personal info & about text',
+            'Add, remove, or reorder experiences, skills, projects & education',
+            'Update your skills & levels',
+          ].map(t => (
             <li key={t}><i className="fas fa-circle-check" />{t}</li>
           ))}
         </ul>
@@ -186,7 +231,6 @@ function SectionDashboard({ data, setSection }) {
 }
 
 // ── Personal info ────────────────────────────────────────────
-
 function SectionPersonal({ data, onSave }) {
   const [form, setForm] = useState(data.personalInfo);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -203,7 +247,7 @@ function SectionPersonal({ data, onSave }) {
         </div>
         <Field label="Description" value={form.description} onChange={v => set('description', v)} textarea />
         <div className="form-row">
-          <Field label="Email"   value={form.email}   onChange={v => set('email', v)} type="email" />
+          <Field label="Email"   value={form.email}   onChange={v => set('email', v)}   type="email" />
           <Field label="Discord" value={form.discord} onChange={v => set('discord', v)} />
         </div>
         <div className="form-row">
@@ -214,14 +258,15 @@ function SectionPersonal({ data, onSave }) {
           <Field label="Years Experience"   value={form.yearsExperience}   onChange={v => set('yearsExperience', v)} />
           <Field label="Projects Completed" value={form.projectsCompleted} onChange={v => set('projectsCompleted', v)} />
         </div>
-        <button type="submit" className="btn btn--primary"><i className="fas fa-floppy-disk" />Save Changes</button>
+        <button type="submit" className="btn btn--primary">
+          <i className="fas fa-floppy-disk" />Save Changes
+        </button>
       </form>
     </div>
   );
 }
 
 // ── About ────────────────────────────────────────────────────
-
 function SectionAbout({ data, onSave }) {
   const [form, setForm] = useState(data.about);
   return (
@@ -232,13 +277,39 @@ function SectionAbout({ data, onSave }) {
       <form className="admin-form" onSubmit={e => { e.preventDefault(); onSave({ ...data, about: form }); }}>
         <Field label="Paragraph 1" value={form.text1} onChange={v => setForm(f => ({ ...f, text1: v }))} textarea rows={4} />
         <Field label="Paragraph 2" value={form.text2} onChange={v => setForm(f => ({ ...f, text2: v }))} textarea rows={4} />
-        <button type="submit" className="btn btn--primary"><i className="fas fa-floppy-disk" />Save Changes</button>
+        <button type="submit" className="btn btn--primary">
+          <i className="fas fa-floppy-disk" />Save Changes
+        </button>
       </form>
     </div>
   );
 }
 
 // ── Generic CRUD list ────────────────────────────────────────
+function ReorderButtons({ index, total, onMoveUp, onMoveDown }) {
+  return (
+    <div className="item-card__reorder" role="group" aria-label="Reorder">
+      <button
+        type="button"
+        className="btn btn--ghost btn--icon"
+        disabled={index <= 0}
+        onClick={onMoveUp}
+        aria-label="Move up"
+      >
+        <i className="fas fa-chevron-up" />
+      </button>
+      <button
+        type="button"
+        className="btn btn--ghost btn--icon"
+        disabled={index >= total - 1}
+        onClick={onMoveDown}
+        aria-label="Move down"
+      >
+        <i className="fas fa-chevron-down" />
+      </button>
+    </div>
+  );
+}
 
 function SectionList({ title, icon, items, onSave, modal, setModal, renderForm: RenderForm, renderItem: RenderItem }) {
   function openAdd()    { setModal({ type: 'add',  item: null }); }
@@ -246,13 +317,20 @@ function SectionList({ title, icon, items, onSave, modal, setModal, renderForm: 
   function openDel(it)  { setModal({ type: 'del',  item: it }); }
   function closeModal() { setModal(null); }
 
+  function handleMoveUp(index) {
+    if (index <= 0) return;
+    onSave(moveItemAt(items, index, index - 1));
+  }
+
+  function handleMoveDown(index) {
+    if (index >= items.length - 1) return;
+    onSave(moveItemAt(items, index, index + 1));
+  }
+
   function handleSave(newItem) {
-    let updated;
-    if (modal.type === 'add') {
-      updated = [...items, { ...newItem, id: nextId(items) }];
-    } else {
-      updated = items.map(i => i.id === newItem.id ? newItem : i);
-    }
+    const updated = modal.type === 'add'
+      ? [...items, { ...newItem, id: nextId(items) }]
+      : items.map(i => i.id === newItem.id ? newItem : i);
     onSave(updated);
     closeModal();
   }
@@ -267,18 +345,43 @@ function SectionList({ title, icon, items, onSave, modal, setModal, renderForm: 
       <div className="admin-card">
         <div className="admin-card__header">
           <h2 className="admin-card__title"><i className={`fas ${icon}`} />{title}</h2>
-          <button className="btn btn--primary btn--sm" onClick={openAdd}>
+          <button type="button" className="btn btn--primary btn--sm" onClick={openAdd}>
             <i className="fas fa-plus" />Add New
           </button>
         </div>
         <div className="items-list">
           {items.length === 0
-            ? <div className="empty-state"><i className={`fas ${icon}`} /><p>No {title.toLowerCase()} yet.</p></div>
-            : items.map(it => (
+            ? <div className="empty-state">
+                <i className={`fas ${icon}`} />
+                <p>No {title.toLowerCase()} yet.</p>
+              </div>
+            : items.map((it, index) =>
                 RenderItem
-                  ? <RenderItem key={it.id} item={it} onEdit={() => openEdit(it)} onDelete={() => openDel(it)} />
-                  : <DefaultItemRow key={it.id} item={it} onEdit={() => openEdit(it)} onDelete={() => openDel(it)} />
-              ))
+                  ? (
+                      <RenderItem
+                        key={it.id}
+                        item={it}
+                        index={index}
+                        total={items.length}
+                        onMoveUp={() => handleMoveUp(index)}
+                        onMoveDown={() => handleMoveDown(index)}
+                        onEdit={() => openEdit(it)}
+                        onDelete={() => openDel(it)}
+                      />
+                    )
+                  : (
+                      <DefaultItemRow
+                        key={it.id}
+                        item={it}
+                        index={index}
+                        total={items.length}
+                        onMoveUp={() => handleMoveUp(index)}
+                        onMoveDown={() => handleMoveDown(index)}
+                        onEdit={() => openEdit(it)}
+                        onDelete={() => openDel(it)}
+                      />
+                    )
+              )
           }
         </div>
       </div>
@@ -295,12 +398,14 @@ function SectionList({ title, icon, items, onSave, modal, setModal, renderForm: 
       )}
       {modal?.type === 'del' && (
         <Modal title="Confirm Delete" onClose={closeModal}>
-          <p style={{ marginBottom: 'var(--space-6)', color: 'var(--color-text-secondary)' }}>
-            Delete <strong style={{ color: 'var(--color-text-primary)' }}>{modal.item.title || modal.item.name}</strong>? This action cannot be undone.
+          <p style={{ marginBottom: 'var(--s6)', color: 'var(--text-2)' }}>
+            Delete <strong style={{ color: 'var(--text)' }}>{modal.item.title || modal.item.name}</strong>? This action cannot be undone.
           </p>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 'var(--s3)', justifyContent: 'flex-end' }}>
             <button className="btn btn--ghost" onClick={closeModal}>Cancel</button>
-            <button className="btn btn--danger" onClick={handleDelete}><i className="fas fa-trash" />Delete</button>
+            <button className="btn btn--danger" onClick={handleDelete}>
+              <i className="fas fa-trash" />Delete
+            </button>
           </div>
         </Modal>
       )}
@@ -309,50 +414,58 @@ function SectionList({ title, icon, items, onSave, modal, setModal, renderForm: 
 }
 
 // ── Item rows ────────────────────────────────────────────────
-
-function DefaultItemRow({ item, onEdit, onDelete }) {
+function DefaultItemRow({ item, index, total, onMoveUp, onMoveDown, onEdit, onDelete }) {
   return (
     <div className="item-card">
+      <ReorderButtons index={index} total={total} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
       <div className="item-card__info">
-        {item.title && <div className="item-card__title">{item.title}</div>}
-        {item.period && <div className="item-card__meta">{item.period}</div>}
+        {item.title      && <div className="item-card__title">{item.title}</div>}
+        {item.period     && <div className="item-card__meta">{item.period}</div>}
         {item.description && <div className="item-card__desc">{item.description}</div>}
-        {item.link && <div className="item-card__link">{item.link}</div>}
+        {item.link       && <div className="item-card__link">{item.link}</div>}
       </div>
       <div className="item-card__actions">
-        <button className="btn btn--ghost btn--icon" onClick={onEdit} aria-label="Edit"><i className="fas fa-pen" /></button>
-        <button className="btn btn--danger btn--icon" onClick={onDelete} aria-label="Delete"><i className="fas fa-trash" /></button>
+        <button type="button" className="btn btn--ghost btn--icon" onClick={onEdit} aria-label="Edit">
+          <i className="fas fa-pen" />
+        </button>
+        <button type="button" className="btn btn--danger btn--icon" onClick={onDelete} aria-label="Delete">
+          <i className="fas fa-trash" />
+        </button>
       </div>
     </div>
   );
 }
 
-function SkillItemRow({ item, onEdit, onDelete }) {
+function SkillItemRow({ item, index, total, onMoveUp, onMoveDown, onEdit, onDelete }) {
   return (
     <div className="item-card">
+      <ReorderButtons index={index} total={total} onMoveUp={onMoveUp} onMoveDown={onMoveDown} />
       <div className="item-card__info" style={{ flex: 1 }}>
         <div className="item-card__title">{item.name}</div>
-        <div className="progress-bar" style={{ marginTop: 'var(--space-2)' }}>
+        <div className="progress-bar" style={{ marginTop: 'var(--s2)' }}>
           <div className="progress-bar__fill" style={{ width: `${item.level}%`, transition: 'none' }} />
         </div>
-        <div className="item-card__meta" style={{ marginTop: 'var(--space-1)' }}>{item.level}%</div>
+        <div className="item-card__meta" style={{ marginTop: 'var(--s1)' }}>{item.level}%</div>
       </div>
       <div className="item-card__actions">
-        <button className="btn btn--ghost btn--icon" onClick={onEdit} aria-label="Edit"><i className="fas fa-pen" /></button>
-        <button className="btn btn--danger btn--icon" onClick={onDelete} aria-label="Delete"><i className="fas fa-trash" /></button>
+        <button type="button" className="btn btn--ghost btn--icon" onClick={onEdit} aria-label="Edit">
+          <i className="fas fa-pen" />
+        </button>
+        <button type="button" className="btn btn--danger btn--icon" onClick={onDelete} aria-label="Delete">
+          <i className="fas fa-trash" />
+        </button>
       </div>
     </div>
   );
 }
 
 // ── Forms ────────────────────────────────────────────────────
-
 function ExperienceForm({ item, onSave, onCancel }) {
   const [f, setF] = useState(item || { title: '', period: '', description: '' });
   return (
     <form className="admin-form" onSubmit={e => { e.preventDefault(); onSave(f); }}>
-      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))} required />
-      <Field label="Period"      value={f.period}      onChange={v => setF(p => ({ ...p, period: v }))} placeholder="e.g. 2022 - Present" />
+      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))}       required />
+      <Field label="Period"      value={f.period}      onChange={v => setF(p => ({ ...p, period: v }))}      placeholder="e.g. 2022 - Present" />
       <Field label="Description" value={f.description} onChange={v => setF(p => ({ ...p, description: v }))} textarea />
       <FormActions onCancel={onCancel} />
     </form>
@@ -367,12 +480,13 @@ function SkillForm({ item, onSave, onCancel }) {
       <div className="form-group">
         <label className="form-label">Level: {f.level}%</label>
         <input
-          type="range" min={0} max={100} step={5}
+          type="range"
+          min={0} max={100} step={5}
           value={f.level}
           onChange={e => setF(p => ({ ...p, level: +e.target.value }))}
-          style={{ width: '100%', accentColor: 'var(--color-cyan)' }}
+          style={{ width: '100%', accentColor: 'var(--lime)' }}
         />
-        <div className="progress-bar" style={{ marginTop: 'var(--space-2)' }}>
+        <div className="progress-bar" style={{ marginTop: 'var(--s2)' }}>
           <div className="progress-bar__fill" style={{ width: `${f.level}%`, transition: 'none' }} />
         </div>
       </div>
@@ -382,14 +496,12 @@ function SkillForm({ item, onSave, onCancel }) {
 }
 
 function ProjectForm({ item, onSave, onCancel }) {
-  const [f, setF] = useState(item || { title: '', description: '', link: '', technologies: [] });
+  const [f, setF]           = useState(item || { title: '', description: '', link: '', technologies: [] });
   const [techInput, setTechInput] = useState('');
 
   function addTech() {
     const t = techInput.trim();
-    if (t && !f.technologies.includes(t)) {
-      setF(p => ({ ...p, technologies: [...p.technologies, t] }));
-    }
+    if (t && !f.technologies.includes(t)) setF(p => ({ ...p, technologies: [...p.technologies, t] }));
     setTechInput('');
   }
 
@@ -399,12 +511,12 @@ function ProjectForm({ item, onSave, onCancel }) {
 
   return (
     <form className="admin-form" onSubmit={e => { e.preventDefault(); onSave(f); }}>
-      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))} required />
+      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))}       required />
       <Field label="Description" value={f.description} onChange={v => setF(p => ({ ...p, description: v }))} textarea />
-      <Field label="GitHub Link" value={f.link}        onChange={v => setF(p => ({ ...p, link: v }))} type="url" placeholder="https://github.com/..." />
+      <Field label="GitHub Link" value={f.link}        onChange={v => setF(p => ({ ...p, link: v }))}        type="url" placeholder="https://github.com/..." />
       <div className="form-group">
         <label className="form-label">Technologies</label>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', gap: 'var(--s2)', marginBottom: 'var(--s2)' }}>
           <input
             type="text"
             className="form-input"
@@ -415,7 +527,7 @@ function ProjectForm({ item, onSave, onCancel }) {
           />
           <button type="button" className="btn btn--outline btn--sm" onClick={addTech}>Add</button>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s2)' }}>
           {f.technologies.map(t => (
             <span key={t} className="tech-tag" style={{ cursor: 'pointer' }} onClick={() => removeTech(t)}>
               {t} <i className="fas fa-xmark" style={{ marginLeft: 4 }} />
@@ -432,7 +544,7 @@ function EducationForm({ item, onSave, onCancel }) {
   const [f, setF] = useState(item || { title: '', period: '', description: '' });
   return (
     <form className="admin-form" onSubmit={e => { e.preventDefault(); onSave(f); }}>
-      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))} required />
+      <Field label="Title"       value={f.title}       onChange={v => setF(p => ({ ...p, title: v }))}       required />
       <Field label="Period"      value={f.period}      onChange={v => setF(p => ({ ...p, period: v }))} />
       <Field label="Description" value={f.description} onChange={v => setF(p => ({ ...p, description: v }))} textarea />
       <FormActions onCancel={onCancel} />
@@ -441,7 +553,6 @@ function EducationForm({ item, onSave, onCancel }) {
 }
 
 // ── Settings ─────────────────────────────────────────────────
-
 function SectionSettings({ data, onSave, addToast }) {
   const [uForm, setUForm] = useState({ newUsername: '', currentPassword: '' });
   const [pForm, setPForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -452,7 +563,7 @@ function SectionSettings({ data, onSave, addToast }) {
     e.preventDefault();
     setULoading(true);
     try {
-      const { salt } = await authApi.status();
+      const { salt }    = await authApi.status();
       const currentHash = await hashPassword(uForm.currentPassword, salt);
       await authApi.changeUsername({ newUsername: uForm.newUsername, currentHash });
       sessionStorage.setItem('portfolio_user', uForm.newUsername);
@@ -470,10 +581,10 @@ function SectionSettings({ data, onSave, addToast }) {
     if (pForm.newPassword !== pForm.confirmPassword) { addToast('Passwords do not match', 'error'); return; }
     setPLoading(true);
     try {
-      const { salt } = await authApi.status();
+      const { salt }    = await authApi.status();
       const currentHash = await hashPassword(pForm.currentPassword, salt);
-      const newSalt  = generateSalt();
-      const newHash  = await hashPassword(pForm.newPassword, newSalt);
+      const newSalt     = generateSalt();
+      const newHash     = await hashPassword(pForm.newPassword, newSalt);
       await authApi.changePassword({ currentHash, newHash, newSalt });
       addToast('Password changed!', 'success');
       setPForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -491,7 +602,7 @@ function SectionSettings({ data, onSave, addToast }) {
 
   function importData() {
     const input = document.createElement('input');
-    input.type = 'file';
+    input.type  = 'file';
     input.accept = '.json';
     input.onchange = () => {
       const file = input.files[0];
@@ -517,19 +628,20 @@ function SectionSettings({ data, onSave, addToast }) {
         <h2 className="admin-card__title"><i className="fas fa-gear" />Settings</h2>
       </div>
 
-      {/* Change username */}
       <div className="settings-section">
         <h3>Change Username</h3>
         <form className="admin-form" onSubmit={changeUsername}>
           <Field label="New Username"     value={uForm.newUsername}     onChange={v => setUForm(f => ({ ...f, newUsername: v }))}     required />
           <Field label="Current Password" value={uForm.currentPassword} onChange={v => setUForm(f => ({ ...f, currentPassword: v }))} type="password" required />
           <button type="submit" className="btn btn--primary btn--sm" disabled={uLoading}>
-            {uLoading ? <><i className="fas fa-spinner fa-spin" />Saving…</> : <><i className="fas fa-user-pen" />Change Username</>}
+            {uLoading
+              ? <><i className="fas fa-spinner fa-spin" />Saving…</>
+              : <><i className="fas fa-user-pen" />Change Username</>
+            }
           </button>
         </form>
       </div>
 
-      {/* Change password */}
       <div className="settings-section">
         <h3>Change Password</h3>
         <form className="admin-form" onSubmit={changePassword}>
@@ -537,12 +649,14 @@ function SectionSettings({ data, onSave, addToast }) {
           <Field label="New Password"     value={pForm.newPassword}     onChange={v => setPForm(f => ({ ...f, newPassword: v }))}     type="password" required />
           <Field label="Confirm Password" value={pForm.confirmPassword} onChange={v => setPForm(f => ({ ...f, confirmPassword: v }))} type="password" required />
           <button type="submit" className="btn btn--primary btn--sm" disabled={pLoading}>
-            {pLoading ? <><i className="fas fa-spinner fa-spin" />Saving…</> : <><i className="fas fa-lock" />Change Password</>}
+            {pLoading
+              ? <><i className="fas fa-spinner fa-spin" />Saving…</>
+              : <><i className="fas fa-lock" />Change Password</>
+            }
           </button>
         </form>
       </div>
 
-      {/* Data management */}
       <div className="settings-section">
         <h3>Data Management</h3>
         <div className="settings-actions">
@@ -559,12 +673,11 @@ function SectionSettings({ data, onSave, addToast }) {
 }
 
 // ── Shared form field ────────────────────────────────────────
-
 function Field({ label, value, onChange, type = 'text', textarea, rows = 3, placeholder, required }) {
   const props = {
-    className: textarea ? 'form-textarea' : 'form-input',
-    value: value || '',
-    onChange: e => onChange(e.target.value),
+    className:   textarea ? 'form-textarea' : 'form-input',
+    value:       value || '',
+    onChange:    e => onChange(e.target.value),
     placeholder,
     required,
     rows,
@@ -579,9 +692,11 @@ function Field({ label, value, onChange, type = 'text', textarea, rows = 3, plac
 
 function FormActions({ onCancel }) {
   return (
-    <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+    <div style={{ display: 'flex', gap: 'var(--s3)', justifyContent: 'flex-end', marginTop: 'var(--s4)' }}>
       <button type="button" className="btn btn--ghost" onClick={onCancel}>Cancel</button>
-      <button type="submit" className="btn btn--primary"><i className="fas fa-floppy-disk" />Save</button>
+      <button type="submit" className="btn btn--primary">
+        <i className="fas fa-floppy-disk" />Save
+      </button>
     </div>
   );
 }

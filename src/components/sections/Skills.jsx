@@ -1,47 +1,49 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-function SkillItem({ skill }) {
+export default function Skills({ skills = [] }) {
+  const [visible, setVisible] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          el.classList.add('is-animated');
-          el.style.setProperty('--skill-level', `${skill.level}%`);
-          obs.disconnect();
-        }
-      },
-      { rootMargin: '0px 0px -40px 0px' }
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.15 }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [skill.level]);
+  }, []);
 
-  return (
-    <div className="skill-item" ref={ref}>
-      <div className="skill-item__header">
-        <span className="skill-item__name">{skill.name}</span>
-        <span className="skill-item__level">{skill.level}%</span>
-      </div>
-      <div className="progress-bar">
-        <div className="progress-bar__fill" />
-      </div>
-    </div>
-  );
-}
-
-export default function Skills({ skills = [] }) {
   return (
     <section id="skills" className="section">
       <div className="container">
-        <h2 className="section-title">Skills</h2>
-        <div className="skills__grid">
-          {skills.map(skill => (
-            <SkillItem key={skill.id} skill={skill} />
-          ))}
+        <div className="section-inner" ref={ref}>
+          <div className="section-bg-number" aria-hidden="true">03</div>
+
+          <header className="section-header">
+            <div className="section-label">Technical Skills</div>
+            <h2 className="section-title">SKILLS</h2>
+          </header>
+
+          <div className="section-shell section-shell--flush">
+          <div className="skills__grid">
+            {skills.map(skill => (
+              <div key={skill.id} className="skill-item">
+                <div className="skill-item__header">
+                  <span className="skill-item__name">{skill.name}</span>
+                  <span className="skill-item__level">{skill.level}%</span>
+                </div>
+                <div className="progress-bar">
+                  <div
+                    className="progress-bar__fill"
+                    style={{ width: visible ? `${skill.level}%` : '0%' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          </div>
         </div>
       </div>
     </section>

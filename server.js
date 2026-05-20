@@ -12,7 +12,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
-const PORT      = parseInt(process.env.PORT, 10) || 3000;
+const PORT      = parseInt(process.env.PORT, 10) || 5001;
+/** Bind address — use 0.0.0.0 on a VPS so nginx can reach Node via 127.0.0.1:PORT */
+const HOST      = process.env.HOST || '0.0.0.0';
 const DATA_DIR  = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'portfolio.json');
 const AUTH_FILE = path.join(DATA_DIR, 'auth.json');
@@ -219,7 +221,8 @@ app.put('/api/auth/password', requireAuth, (req, res) => {
 
 // ── Static (production) ──────────────────────────────────────
 
-if (fs.existsSync(DIST_DIR)) {
+const hasDist = fs.existsSync(DIST_DIR);
+if (hasDist) {
   app.use(express.static(DIST_DIR));
   app.get('*', (_, res) => res.sendFile(path.join(DIST_DIR, 'index.html')));
 } else {
@@ -229,7 +232,8 @@ if (fs.existsSync(DIST_DIR)) {
 // ── Start ────────────────────────────────────────────────────
 
 ensureDataDir();
-app.listen(PORT, () => {
-  console.log(`[server] API running at http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`[server] Listening on http://${HOST}:${PORT}`);
+  console.log(`[server] Static (dist): ${hasDist ? 'yes' : 'NO — run build before production'}`);
   console.log(`[server] Data: ${DATA_DIR}`);
 });
